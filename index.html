@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Plataforma Premium 360 Real Estate</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #020617; color: #fff; font-family: 'Inter', system-ui, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+        #canvas { position: fixed; inset: 0; z-index: 1; }
+        #canvas canvas { display: block; outline: none; }
+        #ui { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        
+        .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
+        .sidebar { width: 380px; height: 100%; transform: translateX(-105%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: auto; display: flex; flex-direction: column; }
+        .sidebar.open { transform: translateX(0); }
+        .scroll { overflow-y: auto; overflow-x: hidden; }
+        .scroll::-webkit-scrollbar { width: 6px; }
+        .scroll::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.5); border-radius: 10px; }
+
+        .marker-container { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 10; }
+        .map-pin { font-size: 36px; text-shadow: 0 4px 10px rgba(0,0,0,0.6); margin-bottom: 2px; animation: float-pin 2s ease-in-out infinite; }
+        
+        /* Animaciones para Puntos Interactivos */
+        .hotspot-icon { font-size: 32px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); transition: transform 0.2s; }
+        .hotspot-container:hover .hotspot-icon { transform: scale(1.15) translateY(-5px); }
+        .hotspot-pulse { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: rgba(34, 211, 238, 0.5); z-index: -1; animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        @keyframes ping-slow { 75%, 100% { transform: scale(2); opacity: 0; } }
+        @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+        .label3d { display: flex; flex-direction: column; align-items: center; background: rgba(0, 0, 0, 0.85); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 6px 14px; font-size: 12px; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); pointer-events: auto; }
+        .label-header { display: flex; align-items: center; gap: 8px; }
+        
+        /* Colores de estados */
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .available .dot { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .sold .dot { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .proceso .dot { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+
+        /* Tooltip Lotes */
+        #tooltip { position: fixed; z-index: 100; min-width: 220px; max-width: 280px; transform: translate(-50%, -125%); opacity: 0; pointer-events: none; padding: 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(249, 115, 22, 0.5); box-shadow: 0 15px 35px rgba(0,0,0,0.6); transition: opacity 0.15s ease-out; }
+        #tooltip img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; cursor: pointer; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); }
+        #tooltip img:hover { opacity: 0.9; border-color: #f97316; }
+        
+        .modal-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .scene-card { background-size: cover; background-position: center; position: relative; }
+        .scene-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); border-radius: inherit; }
+
+        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(249, 115, 22, 0.4); color: white; padding: 12px 24px; border-radius: 50px; font-size: 13px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes toast-in { from { opacity: 0; transform: translateY(20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .hidden { display: none !important; }
+        .maps-pulse { animation: pulse-orange 2s infinite; }
+        @keyframes pulse-orange { 0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); } }
+        
+        #fullImageModal img { max-width: 90vw; max-height: 85vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 2px solid rgba(249, 115, 22, 0.5); }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <div id="labels" class="fixed inset-0 z-10 pointer-events-none overflow-hidden"></div>
+    
+    <!-- Botón Volver (Para cuando se entra a un Hotspot 360) -->
+    <div id="btnBackToScene" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-50 interactive">
+        <button onclick="exitHotspot360()" class="glass px-6 py-3 rounded-full text-white font-bold text-sm border-orange-500/50 hover:bg-orange-600/50 transition-colors shadow-2xl flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Volver a la Vista Principal
+        </button>
+    </div>
+    
+    <!-- Tooltip Polígonos al pasar el mouse -->
+    <div id="tooltip">
+        <div id="ttName" class="font-bold text-[16px] text-white"></div>
+        <div class="flex justify-between items-center mt-1 pb-2 border-b border-white/10">
+            <div id="ttStatus" class="text-[11px] uppercase tracking-wider font-bold"></div>
+            <div id="ttPrice" class="text-[13px] text-orange-400 font-bold bg-orange-500/10 px-2 py-0.5 rounded"></div>
+        </div>
+        <div id="ttArea" class="text-[12px] text-gray-300 font-semibold mt-2 hidden"><i class="fas fa-vector-square text-orange-400 mr-1"></i> <span id="ttAreaText"></span></div>
+        <div id="ttDesc" class="text-[11px] text-gray-400 mt-1.5 leading-tight hidden text-balance"></div>
+        
+        <div class="text-[9px] text-orange-300/70 mt-2 mb-1 text-center hidden uppercase tracking-wide" id="ttClickHint">Clic en la foto para ampliar</div>
+        <img id="ttImage" class="hidden" alt="Imagen del lote" onclick="openFullImage(this.src)">
+    </div>
+
+    <!-- Visor de imagen en pantalla completa -->
+    <div id="fullImageModal" class="modal-overlay interactive" onclick="if(event.target === this) this.classList.remove('active')">
+        <img id="fullImage" src="" alt="Vista ampliada">
+        <button class="absolute top-4 right-4 text-white bg-black/50 hover:bg-orange-500 rounded-full w-12 h-12 flex items-center justify-center transition-colors" onclick="document.getElementById('fullImageModal').classList.remove('active')">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Modal Info Hotspot -->
+    <div id="infoHotspotModal" class="modal-overlay interactive" onclick="if(event.target === this) this.classList.remove('active')">
+        <div class="glass rounded-2xl p-6 w-[92%] max-w-sm border border-cyan-500/30 shadow-2xl bg-black/90 text-center">
+            <div id="hsModalIconContainer" class="w-16 h-16 mx-auto rounded-full bg-cyan-900/50 border border-cyan-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.3)] mb-4">
+                <i id="hsModalIcon" class="fas fa-info-circle text-cyan-400 text-2xl"></i>
+            </div>
+            <h2 id="hsModalTitle" class="text-xl font-bold text-white leading-tight mb-2"></h2>
+            <div class="max-h-[50vh] overflow-y-auto scroll px-2">
+                <p id="hsModalDesc" class="text-sm text-gray-300 whitespace-pre-wrap"></p>
+            </div>
+            <button class="mt-5 w-full bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors" onclick="document.getElementById('infoHotspotModal').classList.remove('active')">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="ui" class="flex">
+        <aside id="sidebar" class="sidebar glass relative z-30 border-r border-orange-500/20">
+            <div class="p-5 border-b border-orange-500/20 flex items-center justify-between bg-black/40">
+                <div>
+                    <div class="text-[10px] uppercase tracking-[.2em] text-orange-300/70 mb-1">Panel de Control</div>
+                    <h2 class="text-lg font-bold text-orange-500">Premium 360°</h2>
+                </div>
+                <button id="closeAdmin" class="text-gray-400 hover:text-orange-500 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="scroll flex-1 p-5 space-y-6">
+                <!-- Configuración Contacto -->
+                <section>
+                    <h3 class="text-xs uppercase tracking-wider text-green-400 font-bold mb-3"><i class="fab fa-whatsapp mr-2"></i>Contacto de Ventas</h3>
+                    <div class="bg-black/50 border border-green-500/30 rounded-xl p-3 shadow-inner">
+                        <label class="text-[10px] text-gray-400 block mb-1">Nombre</label>
+                        <input id="cfgContactName" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-green-500 mb-2 text-white">
+                        <label class="text-[10px] text-gray-400 block mb-1">Teléfono (WhatsApp)</label>
+                        <input id="cfgContactPhone" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-green-500 mb-3 text-white">
+                        <button id="saveContactConfig" class="w-full bg-green-600 hover:bg-green-500 text-white rounded-lg py-2 text-xs font-bold shadow-lg transition-colors">Actualizar</button>
+                    </div>
+                </section>
+                
+                <hr class="border-orange-500/20">
+
+                <!-- Gestión de Escenas 360 -->
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs uppercase tracking-wider text-orange-400 font-bold"><i class="fas fa-globe mr-2"></i>Escenas 360°</h3>
+                        <button id="btnNewSceneForm" class="bg-orange-600/20 text-orange-500 hover:bg-orange-600 hover:text-white transition-colors px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border border-orange-500/30"><i class="fas fa-plus mr-1"></i>Añadir</button>
+                    </div>
+                    
+                    <div id="sceneForm" class="hidden bg-black/50 border border-orange-500/40 rounded-xl p-4 mb-4 shadow-inner">
+                        <label class="text-[10px] text-gray-400 block mb-1">Nombre de la Escena</label>
+                        <input id="sceneName" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs outline-none focus:border-orange-500 mb-3 text-white" placeholder="Ej. Vista Principal">
+                        
+                        <label class="text-[10px] text-gray-400 block mb-1">Subir Foto 360° (JPG/PNG)</label>
+                        <input type="file" id="sceneFile" accept="image/jpeg, image/png" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 mb-3 text-gray-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer">
+                        
+                        <label class="text-[10px] text-gray-400 block mb-1 text-orange-300"><i class="fas fa-map-marker-alt mr-1"></i>Enlace Google Maps (Opcional)</label>
+                        <input id="sceneMapsUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs outline-none focus:border-orange-500 mb-3 text-white" placeholder="https://maps.app.goo.gl/...">
+                        
+                        <div class="flex gap-2">
+                            <button id="saveScene" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg py-2 text-xs font-bold shadow-lg">Crear Escena</button>
+                            <button id="cancelScene" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-xs font-bold">Cancelar</button>
+                        </div>
+                    </div>
+                    <div id="sceneListAdmin" class="space-y-3"></div>
+                </section>
+                
+                <hr class="border-orange-500/20">
+
+                <!-- Gestión de Puntos Interactivos (Hotspots) -->
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs uppercase tracking-wider text-cyan-400 font-bold"><i class="fas fa-hand-pointer mr-2"></i>Puntos Interactivos</h3>
+                        <button id="startHotspot" class="bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600 hover:text-white transition-colors px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border border-cyan-500/30"><i class="fas fa-plus mr-1"></i>Crear</button>
+                    </div>
+                    
+                    <div id="hotspotMenu" class="hidden bg-cyan-900/30 p-3 rounded-xl border border-cyan-500/40 mb-3 animate-pulse text-center">
+                        <p id="hotspotMenuText" class="text-[11px] text-cyan-200 mb-2"><i class="fas fa-mouse-pointer mr-1"></i> Haz clic en la escena 360 para colocar este punto.</p>
+                        <button id="cancelHotspotPlacement" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-xs font-bold">Cancelar Ubicación</button>
+                    </div>
+
+                    <div id="hotspotForm" class="hidden bg-black/60 border border-cyan-500/40 rounded-xl p-3 mb-3 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+                        <h4 class="text-xs font-bold text-white mb-2 mt-1">Detalles del Punto</h4>
+                        
+                        <label class="text-[10px] text-gray-400 block mb-1">Título</label>
+                        <input id="hsTitle" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-cyan-500 text-white mb-2" placeholder="Ej. Información de la piscina">
+
+                        <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
+                        <textarea id="hsDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-cyan-500 text-white resize-none mb-2" placeholder="Detalles extra..."></textarea>
+                        
+                        <label class="text-[10px] text-gray-400 block mb-1">Ícono (Elegir o subir imagen personalizada)</label>
+                        <div class="flex gap-2 mb-3">
+                            <select id="hsIcon" class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none text-white font-['Font_Awesome_6_Free'] w-1/3">
+                                <option value="fa-info-circle">&#xf05a; Info</option>
+                                <option value="fa-image">&#xf03e; Imagen</option>
+                                <option value="fa-eye">&#xf06e; Ojo</option>
+                                <option value="fa-star">&#xf005; Estrella</option>
+                                <option value="fa-map-marker-alt">&#xf3c5; Mapa</option>
+                                <option value="fa-camera">&#xf030; Cámara</option>
+                            </select>
+                            <input type="file" id="hsIconFile" accept="image/jpeg, image/png" class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs outline-none focus:border-cyan-500 text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-cyan-600 file:text-white cursor-pointer" title="Subir ícono propio">
+                        </div>
+
+                        <label class="text-[10px] text-gray-400 block mb-1 border-t border-cyan-500/30 pt-2">Contenido al hacer clic</label>
+                        <select id="hsContentType" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-2 text-xs outline-none focus:border-cyan-500 text-white mb-2">
+                            <option value="info">Solo Texto (Ventana Info)</option>
+                            <option value="image">Abrir Imagen Normal</option>
+                            <option value="360">Abrir Imagen 360 (Viaje)</option>
+                        </select>
+
+                        <div id="hsContentFileDiv" class="hidden">
+                            <label class="text-[10px] text-gray-400 block mb-1">Subir archivo de contenido</label>
+                            <input type="file" id="hsContentFile" accept="image/jpeg, image/png" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs outline-none focus:border-cyan-500 text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-cyan-600 file:text-white cursor-pointer mb-2">
+                        </div>
+
+                        <div class="flex gap-2 mt-3">
+                            <button id="btnPrepareHotspot" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg py-2 text-xs font-bold transition-colors">Posicionar</button>
+                            <button id="cancelHotspot" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-xs font-bold">Cancelar</button>
+                        </div>
+                    </div>
+
+                    <div id="hotspotList" class="space-y-2"></div>
+                </section>
+
+                <hr class="border-orange-500/20">
+                
+                <!-- Gestión de Lotes/Polígonos -->
+                <section>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs uppercase tracking-wider text-green-400 font-bold"><i class="fas fa-draw-polygon mr-2"></i>Áreas / Lotes</h3>
+                        <button id="startDraw" class="bg-green-600 hover:bg-green-500 text-white transition-colors px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg flex items-center uppercase"><i class="fas fa-plus mr-1"></i> Trazar</button>
+                    </div>
+                    
+                    <div id="drawingMenu" class="hidden bg-green-900/30 p-3 rounded-xl border border-green-500/40 mb-3 animate-pulse text-center">
+                        <p class="text-[11px] text-green-200 mb-2"><i class="fas fa-mouse-pointer mr-1"></i> Haz clic en el 360 para trazar el perímetro del lote (Mín. 3 puntos).</p>
+                        <button id="cancelDraw" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-xs font-bold">Cancelar Marcación</button>
+                    </div>
+                    
+                    <div id="lotForm" class="hidden bg-black/60 border border-orange-500/30 rounded-xl p-3 mb-3 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                        
+                        <div class="grid grid-cols-2 gap-2 mb-2 mt-2">
+                            <div><label class="text-[10px] text-gray-400 block mb-1">Nombre</label><input id="lotName" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white" placeholder="Ej. Lote VIP"></div>
+                            <div><label class="text-[10px] text-gray-400 block mb-1">Precio (En COP)</label><input id="lotPrice" type="text" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-orange-400 font-mono font-bold" placeholder="150000000"></div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="text-[10px] text-gray-400 block mb-1">Área / Medidas</label>
+                            <input id="lotArea" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white" placeholder="Ej. 150 m²">
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
+                            <textarea id="lotDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white resize-none" placeholder="Características principales..."></textarea>
+                        </div>
+                        
+                        <label class="text-[10px] text-gray-400 block mb-1">Foto descriptiva (Opcional)</label>
+                        <input type="file" id="lotFile" accept="image/jpeg, image/png" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs outline-none focus:border-orange-500 mb-3 text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-orange-600 file:text-white cursor-pointer">
+                        
+                        <div class="border-t border-white/10 pt-2 mb-2">
+                            <label class="flex items-center gap-2 text-[11px] text-white cursor-pointer">
+                                <input type="checkbox" id="lotShadingCheck" checked class="w-4 h-4 accent-orange-500"> Mostrar relleno sombreado
+                            </label>
+                        </div>
+
+                        <label class="text-[10px] text-gray-400 block mb-1 uppercase">Guardar como:</label>
+                        <div class="flex gap-1">
+                            <button id="saveAvailable" class="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg py-2 text-[10px] font-bold transition-colors">Disponible</button>
+                            <button id="saveProcess" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 text-[10px] font-bold transition-colors">En Proceso</button>
+                            <button id="saveSold" class="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg py-2 text-[10px] font-bold transition-colors">Vendido</button>
+                        </div>
+                    </div>
+                    
+                    <div id="lotList" class="space-y-2"></div>
+                </section>
+            </div>
+            
+            <div class="p-4 border-t border-orange-500/20 bg-black/40">
+                <button id="logout" class="w-full bg-red-600/80 hover:bg-red-500 text-white rounded-xl py-3 text-xs font-bold flex items-center justify-center transition-colors"><i class="fas fa-sign-out-alt mr-2"></i> Cerrar Edición</button>
+            </div>
+        </aside>
+        
+        <main class="flex-1 p-4 relative z-20 flex flex-col justify-between pointer-events-none">
+            <div class="flex items-start justify-between">
+                <div class="flex flex-col gap-3">
+                    <div class="glass interactive rounded-2xl px-6 py-4 border-t border-l border-white/10 shadow-2xl bg-black/50">
+                        <div class="text-[10px] uppercase tracking-[.25em] text-orange-400 font-bold mb-1"><i class="fas fa-vr-cardboard mr-1"></i> Visor 360° Activo</div>
+                        <div id="mainSceneTitle" class="text-2xl font-bold text-white drop-shadow-md">Conectando a la nube...</div>
+                    </div>
+                    <a id="btnGoogleMaps" href="#" target="_blank" class="hidden interactive glass maps-pulse rounded-2xl px-5 py-3 flex items-center gap-3 bg-blue-600/20 border-blue-500/40 hover:bg-blue-600/40 transition-colors w-fit group">
+                        <i class="fas fa-map-marker-alt text-2xl text-blue-500 group-hover:text-blue-400"></i>
+                        <div><div class="text-[10px] uppercase text-blue-200 font-bold">Ubicación exacta</div><div class="text-sm font-bold text-white">Abrir en Google Maps</div></div>
+                    </a>
+                </div>
+                
+                <div class="flex flex-col items-end gap-3 interactive">
+                    <div class="glass rounded-full px-5 py-2.5 flex items-center gap-3 cursor-pointer shadow-lg bg-black/50 border border-white/5 hover:bg-black/70 transition-colors" id="toggleAdminBtn">
+                        <i id="modeIcon" class="fas fa-eye text-orange-400"></i><span id="modeText" class="text-xs font-semibold text-white">Modo Público</span>
+                        <div class="w-10 h-5 rounded-full bg-gray-700 relative shadow-inner border border-gray-600"><span id="adminKnob" class="absolute top-0.5 left-0.5 w-4 h-4 bg-orange-500 rounded-full transition-all"></span></div>
+                    </div>
+                    <div id="loading" class="hidden glass rounded-full px-4 py-2 text-xs font-bold text-white bg-orange-600/80 border border-orange-400"><i class="fas fa-circle-notch fa-spin mr-2"></i> Procesando...</div>
+                </div>
+            </div>
+            
+            <div class="flex items-end justify-between pointer-events-auto">
+                <div class="flex items-center gap-3 bg-black/50 backdrop-blur-md border border-orange-500/20 p-2 rounded-2xl shadow-2xl max-w-[60vw]">
+                    <button id="btnPrevScene" class="w-10 h-10 rounded-xl bg-orange-500/10 hover:bg-orange-500/30 text-orange-400 flex items-center justify-center transition-colors"><i class="fas fa-chevron-left"></i></button>
+                    <div id="publicSceneCarousel" class="flex gap-2 overflow-x-auto scroll scroll-smooth p-1 snap-x"></div>
+                    <button id="btnNextScene" class="w-10 h-10 rounded-xl bg-orange-500/10 hover:bg-orange-500/30 text-orange-400 flex items-center justify-center transition-colors"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <a id="whatsappLink" href="#" target="_blank" rel="noopener noreferrer" class="group relative w-16 h-16 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 shadow-[0_10px_30px_rgba(34,197,94,0.4)] flex items-center justify-center hover:scale-110 transition-transform duration-300">
+                    <div class="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-30"></div><i class="fab fa-whatsapp text-4xl text-white drop-shadow-md"></i>
+                    <div class="absolute right-20 bg-white text-gray-900 px-4 py-2.5 rounded-xl shadow-2xl text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none flex items-center gap-3 border-l-4 border-green-500">
+                        <img src="https://ui-avatars.com/api/?name=Asesor&background=f97316&color=fff&rounded=true" class="w-8 h-8 rounded-full shadow-inner" alt="Asesor">
+                        <div><div class="text-[10px] text-gray-500 uppercase tracking-wide">Asesor de Ventas</div><div id="whatsappName" class="leading-tight text-black font-bold">Contactar</div></div>
+                        <div class="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45 border-r border-t border-gray-200"></div>
+                    </div>
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay interactive">
+        <div class="glass rounded-2xl p-8 w-[92%] max-w-sm border border-orange-500/30 shadow-2xl transform transition-transform scale-95 bg-black/80" id="loginBox">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-full bg-orange-600/20 border border-orange-500/40 flex items-center justify-center mb-4"><i class="fas fa-lock text-orange-500 text-2xl"></i></div>
+                <h2 class="text-xl font-bold text-white">Acceso Administrativo</h2>
+                <p class="text-xs text-orange-200/60 mt-2">Ingresa la clave maestra para editar.</p>
+            </div>
+            <input id="password" type="password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 outline-none text-center tracking-widest font-mono text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+            <div class="flex gap-3 mt-6">
+                <button id="cancelLogin" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-xl py-3 text-sm font-bold transition-colors">Volver</button>
+                <button id="loginBtn" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors">Desbloquear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editar Lote Modal -->
+    <div id="editModal" class="modal-overlay interactive">
+        <div class="glass rounded-2xl p-6 w-[92%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-lg font-bold text-white mb-4 border-b border-orange-500/30 pb-2"><i class="fas fa-edit text-orange-500 mr-2"></i> Editar Lote</h2>
+            <div class="space-y-4 mt-2">
+                <div><label class="text-[10px] text-gray-400 block mb-1 uppercase tracking-wide">Nombre del Lote</label><input id="editName" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none"></div>
+                <div><label class="text-[10px] text-gray-400 block mb-1 uppercase tracking-wide">Precio</label><input id="editPrice" type="text" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-orange-400 focus:border-orange-500 outline-none font-mono font-bold" placeholder="150000000"></div>
+                <div><label class="text-[10px] text-gray-400 block mb-1 uppercase tracking-wide">Área / Medidas</label><input id="editArea" type="text" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none"></div>
+                <div><label class="text-[10px] text-gray-400 block mb-1 uppercase tracking-wide">Descripción</label><textarea id="editDesc" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none resize-none"></textarea></div>
+                
+                <div class="border-t border-white/10 pt-3">
+                    <label class="flex items-center gap-2 text-[12px] text-white cursor-pointer mb-3">
+                        <input type="checkbox" id="editShadingCheck" class="w-4 h-4 accent-orange-500"> Mostrar relleno sombreado
+                    </label>
+                </div>
+
+                <div>
+                    <label class="text-[10px] text-gray-400 block mb-2 uppercase tracking-wide">Estado de Venta</label>
+                    <div class="flex gap-1">
+                        <button id="btnSetAvailable" class="flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all">Disponible</button>
+                        <button id="btnSetProcess" class="flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all">En Proceso</button>
+                        <button id="btnSetSold" class="flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all">Vendido</button>
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-6">
+                    <button id="closeEditModal" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-xl py-3 text-sm font-bold">Cancelar</button>
+                    <button id="saveEditBtn" class="flex-1 bg-orange-500 hover:bg-orange-400 text-white rounded-xl py-3 text-sm font-bold shadow-lg">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Editar Hotspot Modal -->
+    <div id="editHotspotModal" class="modal-overlay interactive">
+        <div class="glass rounded-2xl p-6 w-[92%] max-w-sm border border-cyan-500/30 shadow-2xl bg-black/90 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-lg font-bold text-white mb-4 border-b border-cyan-500/30 pb-2"><i class="fas fa-edit text-cyan-500 mr-2"></i> Editar Punto</h2>
+            <div class="space-y-3 mt-2">
+                <div><label class="text-[10px] text-gray-400 block mb-1">Título</label><input id="editHsTitle" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"></div>
+                <div><label class="text-[10px] text-gray-400 block mb-1">Descripción</label><textarea id="editHsDesc" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none resize-none"></textarea></div>
+                
+                <div class="text-[10px] text-gray-400 mt-2 mb-1">Modificar Imagen de Contenido (Opcional)</div>
+                <input type="file" id="editHsContentFile" accept="image/jpeg, image/png" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs outline-none text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-cyan-600 file:text-white cursor-pointer">
+                
+                <div class="text-[10px] text-gray-400 mt-2 mb-1">Modificar Ícono (Opcional)</div>
+                <input type="file" id="editHsIconFile" accept="image/jpeg, image/png" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs outline-none text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-cyan-600 file:text-white cursor-pointer">
+
+                <div class="flex gap-2 mt-6">
+                    <button onclick="document.getElementById('editHotspotModal').classList.remove('active')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-xl py-3 text-sm font-bold">Cancelar</button>
+                    <button id="saveEditHsBtn" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Borrar -->
+    <div id="deleteModal" class="modal-overlay interactive">
+        <div class="glass rounded-2xl p-6 w-[92%] max-w-xs text-center border border-red-500/30 bg-black/90">
+            <div class="w-16 h-16 mx-auto rounded-full bg-red-600/20 flex items-center justify-center mb-4"><i class="fas fa-trash-alt text-2xl text-red-500"></i></div>
+            <h3 id="deleteTitle" class="text-lg font-bold text-white mb-2">¿Eliminar Elemento?</h3>
+            <p id="deleteDesc" class="text-xs text-gray-400 mb-6">Esta acción borrará la información permanentemente.</p>
+            <div class="flex gap-2">
+                <button id="cancelDeleteBtn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2.5 text-sm font-bold">Cancelar</button>
+                <button id="confirmDeleteBtn" class="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg py-2.5 text-sm font-bold shadow-lg">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const ADMIN_PASSWORD = "Duarte.03";
+        // Imagen 360 por defecto a prueba de fallos
+        const DEFAULT_360 = "https://raw.githubusercontent.com/aframevr/aframe/master/examples/boilerplate/panorama/puydesancy.jpg";
+        
+        // --- TUS CLAVES EXACTAS ---
+        const IMGBB_API_KEY = "e340602b649c592bd41edbcae14a28a5";
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBABBPKFChN5hWvCVWiFA1PfoBiWg3u2I",
+            authDomain: "visornaren.firebaseapp.com",
+            databaseURL: "https://visornaren-default-rtdb.firebaseio.com",
+            projectId: "visornaren",
+            storageBucket: "visornaren.firebasestorage.app",
+            messagingSenderId: "318746959559",
+            appId: "1:318746959559:web:a34a1d999c9dcb8ecfe8e2",
+            measurementId: "G-SMGNYG1KMJ"
+        };
+        // --------------------------
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let state = { 
+            scenes: [], 
+            currentSceneId: null,
+            contact: { name: 'Naren Duarte', phone: '573206658864' } 
+        };
+        const $ = id => document.getElementById(id);
+        const UI = { canvas: $('canvas'), labels: $('labels') };
+        
+        let isAdmin = false; 
+        
+        let isDrawing = false; let drawingPoints = []; let drawingLine = null; 
+        
+        let isDrawingHotspot = false; let movingHotspotId = null; let pendingHotspotData = null;
+        let inSubScene = false;
+
+        let hoveredMesh = null;
+        let deleteType = null; let deleteId = null; let editingLotId = null; let editStatusSelected = 'available';
+        let editingHsId = null;
+
+        function escapeHTML(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+        
+        // Formato COP puro (Ej: COP 150.000)
+        function formatCOP(value) {
+            let numStr = String(value).replace(/\D/g, ""); 
+            if (!numStr) return "";
+            let num = parseInt(numStr, 10);
+            return "COP " + num.toLocaleString('es-CO');
+        }
+        
+        function applyCurrencyFormat(e) { e.target.value = formatCOP(e.target.value); }
+        $('lotPrice').addEventListener('input', applyCurrencyFormat);
+        $('editPrice').addEventListener('input', applyCurrencyFormat);
+
+        function showToast(msg, type = "info") {
+            const c = $('toast-container'); const t = document.createElement('div'); t.className = 'toast flex items-center gap-2 border-l-4';
+            let icon = '<i class="fas fa-info-circle text-orange-400"></i>';
+            if(type === 'success') { icon = '<i class="fas fa-check-circle text-green-400"></i>'; t.classList.add('border-green-500'); }
+            else if(type === 'error') { icon = '<i class="fas fa-exclamation-circle text-red-400"></i>'; t.classList.add('border-red-500'); }
+            else { t.classList.add('border-orange-500'); }
+            t.innerHTML = `${icon} <span>${escapeHTML(msg)}</span>`;
+            c.appendChild(t);
+            setTimeout(() => { t.style.animation = 'toast-in 0.3s reverse forwards'; setTimeout(() => t.remove(), 300); }, 3500);
+        }
+
+        function openFullImage(src) {
+            if(!src) return;
+            $('fullImage').src = src;
+            $('fullImageModal').classList.add('active');
+        }
+
+        async function uploadImageToImgBB(file) {
+            const formData = new FormData(); formData.append('image', file);
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) return data.data.url;
+            throw new Error(`Error en ImgBB: ${data.error ? data.error.message : 'Desconocido'}`);
+        }
+
+        async function saveStateToFirebase() {
+            try {
+                $('loading').classList.remove('hidden');
+                await db.collection('visor').doc('data').set({ scenes: state.scenes, contact: state.contact, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                $('loading').classList.add('hidden');
+            } catch(e) { 
+                console.error(e); 
+                showToast("Error al guardar en la nube.", "error"); 
+                $('loading').classList.add('hidden'); 
+            }
+        }
+
+        function updateContactUI() {
+            $('cfgContactName').value = state.contact.name || '';
+            $('cfgContactPhone').value = state.contact.phone || '';
+            let n = state.contact.phone || '573206658864';
+            n = n.replace(/\D/g,'');
+            $('whatsappLink').href = 'https://wa.me/' + n;
+            $('whatsappName').textContent = state.contact.name || 'Contactar';
+        }
+        
+        $('saveContactConfig').onclick = async () => {
+            state.contact.name = $('cfgContactName').value.trim();
+            state.contact.phone = $('cfgContactPhone').value.trim();
+            await saveStateToFirebase();
+            updateContactUI();
+            showToast("Contacto actualizado", "success");
+        };
+
+        const scene3D = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 1000); 
+        camera.position.set(0, 0, 0.1);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); UI.canvas.appendChild(renderer.domElement);
+        
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false; 
+        controls.enableZoom = false; // Zoom customizado con FOV
+        controls.enableDamping = true; controls.dampingFactor = 0.05;
+
+        // ZOOM CUSTOM
+        renderer.domElement.addEventListener('wheel', (e) => {
+            camera.fov += e.deltaY * 0.05;
+            camera.fov = Math.max(20, Math.min(100, camera.fov)); 
+            camera.updateProjectionMatrix();
+        }, {passive: true});
+
+        let touchStartDist = 0; let initialFov = 0;
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                touchStartDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                initialFov = camera.fov;
+            }
+        }, {passive: true});
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                const delta = touchStartDist - dist;
+                camera.fov = initialFov + delta * 0.1;
+                camera.fov = Math.max(20, Math.min(100, camera.fov));
+                camera.updateProjectionMatrix();
+            }
+        }, {passive: true});
+
+        const sphereGeo = new THREE.SphereGeometry(500, 64, 40); sphereGeo.scale(-1, 1, 1);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+        const sphere = new THREE.Mesh(sphereGeo, sphereMat); scene3D.add(sphere);
+        
+        const texLoader = new THREE.TextureLoader(); texLoader.setCrossOrigin('anonymous');
+        const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        const meshes = { polygons: [], labels: [] };
+
+        async function initData() {
+            $('mainSceneTitle').textContent = "Conectando a la nube...";
+            db.collection('visor').doc('data').onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if(data.contact) state.contact = data.contact; updateContactUI();
+                    if(data.scenes && data.scenes.length > 0) {
+                        state.scenes = data.scenes;
+                        if (!state.currentSceneId || !state.scenes.find(s => s.id === state.currentSceneId)) {
+                            state.currentSceneId = state.scenes[0].id;
+                            load360Scene(state.currentSceneId);
+                        } else if(!inSubScene) { rebuildLots(); renderAllUI(); }
+                    } else { createDefaultScene(); }
+                } else { createDefaultScene(); }
+            }, (error) => { 
+                console.warn("Usando modo sin conexión (demo)", error); 
+                createDefaultScene(); 
+            });
+        }
+
+        function createDefaultScene() {
+            if(state.scenes.length === 0) {
+                state.scenes = [{ id: 'scene-def', name: 'Vista Principal', url: DEFAULT_360, mapsUrl: '', lots: [], hotspots: [] }];
+                state.currentSceneId = 'scene-def'; load360Scene(state.currentSceneId);
+            }
+        }
+
+        function getCurrentScene() { return state.scenes.find(s => s.id === state.currentSceneId) || state.scenes[0]; }
+
+        function load360Scene(sceneId) {
+            inSubScene = false;
+            $('btnBackToScene').classList.add('hidden');
+            
+            state.currentSceneId = sceneId; const sc = getCurrentScene(); if(!sc) return;
+            $('mainSceneTitle').innerHTML = `<i class="fas fa-vr-cardboard text-orange-400 mr-2"></i> ${escapeHTML(sc.name)}`;
+            $('loading').classList.remove('hidden');
+            
+            const btnMaps = $('btnGoogleMaps');
+            if (sc.mapsUrl && sc.mapsUrl.trim() !== '') { btnMaps.href = sc.mapsUrl; btnMaps.classList.remove('hidden'); } else { btnMaps.classList.add('hidden'); }
+
+            texLoader.load(sc.url || DEFAULT_360, t => {
+                t.encoding = THREE.sRGBEncoding; sphereMat.color.setHex(0xffffff); sphereMat.map = t; sphereMat.needsUpdate = true;
+                $('loading').classList.add('hidden'); rebuildLots(); renderAllUI();
+            }, undefined, e => { 
+                sphereMat.map = null; sphereMat.color.setHex(0x1e293b); 
+                $('loading').classList.add('hidden'); showToast("La imagen 360 no cargó.", "warning");
+                rebuildLots(); renderAllUI();
+            });
+        }
+
+        function exitHotspot360() {
+            if(state.currentSceneId) {
+                load360Scene(state.currentSceneId);
+            }
+        }
+
+        function clear3D() {
+            meshes.polygons.forEach(m => { scene3D.remove(m); if(m.geometry) m.geometry.dispose(); if(m.material) m.material.dispose(); });
+            meshes.polygons = []; meshes.labels = []; UI.labels.innerHTML = '';
+        }
+
+        function rebuildLots() {
+            clear3D(); const sc = getCurrentScene(); if(!sc) return;
+            
+            // Lotes (Perímetro y sombreado)
+            if(sc.lots) {
+                sc.lots.forEach(lot => {
+                    if (!lot.points || lot.points.length < 3) return;
+                    const v = lot.points.map(p => new THREE.Vector3(p.x, p.y, p.z));
+                    const c = new THREE.Vector3(); v.forEach(x => c.add(x)); c.divideScalar(v.length); c.normalize().multiplyScalar(498);
+                    
+                    const isSold = lot.status === 'sold';
+                    const isProcess = lot.status === 'proceso';
+                    const statusColor = isSold ? 0xef4444 : (isProcess ? 0x3b82f6 : 0x22c55e);
+                    
+                    // Geometría para el área (Sombreado y Raycast)
+                    const verts = [];
+                    for (let i = 0; i < v.length; i++) {
+                        const p1 = v[i].clone().normalize().multiplyScalar(498), p2 = v[(i+1)%v.length].clone().normalize().multiplyScalar(498);
+                        verts.push(c.x, c.y, c.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+                    }
+                    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); geo.computeVertexNormals();
+                    
+                    // Solo mostramos el sombreado si showShading es true (por defecto es true)
+                    const mat = new THREE.MeshBasicMaterial({ 
+                        color: statusColor, 
+                        transparent: true, 
+                        opacity: lot.showShading !== false ? 0.35 : 0.0, 
+                        side: THREE.DoubleSide, 
+                        depthWrite: false 
+                    });
+                    const mesh = new THREE.Mesh(geo, mat); mesh.userData.lot = lot;
+                    
+                    // Línea perimetral pura (Sin líneas internas cruzadas)
+                    const linePts = [...v.map(p => p.clone().normalize().multiplyScalar(498)), v[0].clone().normalize().multiplyScalar(498)];
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+                    const lineMat = new THREE.LineBasicMaterial({ color: statusColor, linewidth: 2, transparent: true, opacity: 1.0 });
+                    const perimeter = new THREE.Line(lineGeo, lineMat);
+                    mesh.add(perimeter);
+
+                    scene3D.add(mesh); meshes.polygons.push(mesh);
+                    
+                    // Etiqueta 3D flotante (Nombre y Color) - SIN PRECIO
+                    const el = document.createElement('div'); el.className = 'marker-container';
+                    el.innerHTML = `<i class="fas fa-map-marker-alt map-pin" style="color: #${statusColor.toString(16).padStart(6, '0')}"></i><div class="label3d ${isSold ? 'sold' : (isProcess?'proceso':'available')} border-white/20"><div class="label-header"><span class="dot"></span><span class="text-white">${escapeHTML(lot.name)}</span></div></div>`;
+                    
+                    UI.labels.appendChild(el); meshes.labels.push({ element: el, position: c.clone().normalize().multiplyScalar(450) });
+                });
+            }
+
+            // Hotspots
+            if(sc.hotspots) {
+                sc.hotspots.forEach(hs => {
+                    const el = document.createElement('div');
+                    el.className = 'marker-container hotspot-container interactive cursor-pointer';
+                    
+                    let iconHTML = '';
+                    if (hs.customIconUrl) {
+                        iconHTML = `<img src="${hs.customIconUrl}" class="w-10 h-10 rounded-full border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)] object-cover mb-2 hotspot-icon transition-transform">`;
+                    } else {
+                        iconHTML = `<i class="fas ${hs.icon || 'fa-info-circle'} hotspot-icon text-cyan-400 mb-2"></i>`;
+                    }
+                    
+                    el.innerHTML = `
+                        <div class="hotspot-pulse"></div>
+                        ${iconHTML}
+                        <div class="label3d border-cyan-400/50 bg-black/80 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                            <div class="label-header"><span class="text-white text-[11px]">${escapeHTML(hs.title)}</span></div>
+                        </div>`;
+                    
+                    el.onclick = () => {
+                        if(hs.contentType === '360' && hs.contentUrl) {
+                            // Cargar vista 360 interna
+                            inSubScene = true;
+                            $('mainSceneTitle').innerHTML = `<i class="fas fa-vr-cardboard text-cyan-400 mr-2"></i> ${escapeHTML(hs.title)}`;
+                            $('loading').classList.remove('hidden');
+                            texLoader.load(hs.contentUrl, t => {
+                                t.encoding = THREE.sRGBEncoding; sphereMat.map = t; sphereMat.needsUpdate = true;
+                                $('loading').classList.add('hidden');
+                                clear3D(); // Ocultamos lotes y marcas de la escena principal
+                                $('btnBackToScene').classList.remove('hidden'); // Mostrar volver
+                            });
+                        } else if(hs.contentType === 'image' && hs.contentUrl) {
+                            openFullImage(hs.contentUrl);
+                        } else {
+                            // Modal de Información
+                            $('hsModalTitle').textContent = hs.title || 'Información';
+                            $('hsModalDesc').textContent = hs.description || 'Sin descripción.';
+                            if(hs.customIconUrl) {
+                                $('hsModalIconContainer').innerHTML = `<img src="${hs.customIconUrl}" class="w-full h-full object-cover rounded-full">`;
+                            } else {
+                                $('hsModalIconContainer').innerHTML = `<i class="fas ${hs.icon || 'fa-info-circle'} text-cyan-400 text-2xl"></i>`;
+                            }
+                            $('infoHotspotModal').classList.add('active');
+                        }
+                    };
+
+                    UI.labels.appendChild(el);
+                    meshes.labels.push({ element: el, position: new THREE.Vector3(hs.position.x, hs.position.y, hs.position.z) });
+                });
+            }
+        }
+
+        function drawFeedback() {
+            if (drawingLine) { scene3D.remove(drawingLine); drawingLine = null; }
+            if (!drawingPoints.length) return; const pts = [...drawingPoints]; if (pts.length > 2) pts.push(pts[0]);
+            drawingLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xf97316, linewidth: 4 })); scene3D.add(drawingLine);
+        }
+
+        renderer.domElement.addEventListener('click', async e => {
+            if (!isAdmin) return;
+            mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera); const hit = raycaster.intersectObject(sphere)[0]; if (!hit) return;
+            
+            // Colocando/Reubicando Hotspot
+            if (isDrawingHotspot || movingHotspotId) {
+                const sc = getCurrentScene();
+                if(!sc.hotspots) sc.hotspots = [];
+                
+                if (movingHotspotId) {
+                    const hs = sc.hotspots.find(h => h.id === movingHotspotId);
+                    if(hs) hs.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+                    movingHotspotId = null;
+                    showToast("Punto reubicado", "success");
+                } else {
+                    pendingHotspotData.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+                    sc.hotspots.push(pendingHotspotData);
+                    showToast("Punto creado", "success");
+                }
+                
+                await saveStateToFirebase(); cancelHotspot(); rebuildLots(); renderHotspotList();
+                return;
+            }
+
+            // Colocando Lote
+            if(isDrawing) {
+                drawingPoints.push(hit.point.clone()); drawFeedback();
+                if (drawingPoints.length >= 3) { $('lotForm').classList.remove('hidden'); $('lotForm').scrollIntoView({ behavior: 'smooth' }); }
+            }
+        });
+
+        renderer.domElement.addEventListener('mousemove', e => {
+            if(inSubScene) return; // No hover en sub-escenas
+            const tt = $('tooltip'); tt.style.left = e.clientX + 'px'; tt.style.top = e.clientY + 'px';
+            mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; raycaster.setFromCamera(mouse, camera);
+            const hit = raycaster.intersectObjects(meshes.polygons)[0];
+            
+            if (!hit) {
+                if (hoveredMesh) { hoveredMesh.material.opacity = hoveredMesh.userData.lot.showShading !== false ? 0.35 : 0.0; }
+                hoveredMesh = null; tt.style.opacity = '0'; tt.style.pointerEvents = 'none';
+                renderer.domElement.style.cursor = (isDrawing || isDrawingHotspot || movingHotspotId) ? 'crosshair' : 'grab'; return;
+            }
+            
+            renderer.domElement.style.cursor = 'pointer'; const mesh = hit.object;
+            if (hoveredMesh !== mesh) {
+                if (hoveredMesh) hoveredMesh.material.opacity = hoveredMesh.userData.lot.showShading !== false ? 0.35 : 0.0; 
+                hoveredMesh = mesh; 
+                hoveredMesh.material.opacity = 0.8; // Resalte fuerte al pasar
+                const lot = mesh.userData.lot;
+                
+                $('ttName').textContent = lot.name; 
+                let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
+                $('ttPrice').textContent = p;
+                
+                const isSold = lot.status === 'sold';
+                const isProcess = lot.status === 'proceso';
+                $('ttStatus').textContent = isSold ? 'Vendido' : (isProcess ? 'En Proceso' : 'Disponible');
+                $('ttStatus').className = `text-[11px] uppercase tracking-wider font-bold ${isSold ? 'text-red-400' : (isProcess?'text-blue-400':'text-green-400')}`;
+                
+                if(lot.area) { $('ttAreaText').textContent = lot.area; $('ttArea').classList.remove('hidden'); } else { $('ttArea').classList.add('hidden'); }
+                if(lot.desc) { $('ttDesc').textContent = lot.desc; $('ttDesc').classList.remove('hidden'); } else { $('ttDesc').classList.add('hidden'); }
+
+                if (lot.url) { $('ttImage').src = lot.url; $('ttImage').classList.remove('hidden'); $('ttClickHint').classList.remove('hidden'); tt.style.pointerEvents = 'auto'; } 
+                else { $('ttImage').classList.add('hidden'); $('ttClickHint').classList.add('hidden'); tt.style.pointerEvents = 'none'; }
+                
+                tt.style.opacity = '1';
+            }
+        });
+
+        // Visibilidad de subida en form Hotspot
+        $('hsContentType').addEventListener('change', e => {
+            if(e.target.value === 'info') $('hsContentFileDiv').classList.add('hidden');
+            else $('hsContentFileDiv').classList.remove('hidden');
+        });
+
+        function cancelHotspot() {
+            isDrawingHotspot = false; movingHotspotId = null; pendingHotspotData = null;
+            $('hotspotMenu').classList.add('hidden'); $('hotspotForm').classList.add('hidden'); $('startHotspot').classList.remove('hidden'); 
+            renderer.domElement.style.cursor = 'grab';
+        }
+
+        $('startHotspot').onclick = () => {
+            cancelDrawing(); 
+            $('hotspotForm').classList.remove('hidden'); $('startHotspot').classList.add('hidden');
+            $('hsTitle').value = ''; $('hsDesc').value = ''; $('hsIconFile').value = ''; $('hsContentFile').value = '';
+            $('hsContentType').value = 'info'; $('hsContentFileDiv').classList.add('hidden');
+        };
+
+        $('btnPrepareHotspot').onclick = async () => {
+            const title = $('hsTitle').value.trim() || 'Info';
+            const desc = $('hsDesc').value.trim();
+            const icon = $('hsIcon').value;
+            const type = $('hsContentType').value;
+            
+            const iconFile = $('hsIconFile').files[0];
+            const contentFile = $('hsContentFile').files[0];
+            
+            if(type !== 'info' && !contentFile) return showToast("Por favor sube la imagen de contenido", "warning");
+
+            try {
+                $('loading').classList.remove('hidden');
+                let customIconUrl = null;
+                let contentUrl = null;
+                
+                if (iconFile) customIconUrl = await uploadImageToImgBB(iconFile);
+                if (contentFile) contentUrl = await uploadImageToImgBB(contentFile);
+
+                pendingHotspotData = { id: 'hs-' + Date.now(), title, description: desc, icon, customIconUrl, contentType: type, contentUrl };
+                
+                $('hotspotForm').classList.add('hidden');
+                $('hotspotMenu').classList.remove('hidden');
+                $('hotspotMenuText').innerHTML = `<i class="fas fa-mouse-pointer mr-1"></i> Haz clic en la escena para colocar <b>${escapeHTML(title)}</b>.`;
+                isDrawingHotspot = true; renderer.domElement.style.cursor = 'crosshair';
+            } catch(e) {
+                showToast("Error subiendo archivos", "error");
+            } finally {
+                $('loading').classList.add('hidden');
+            }
+        };
+        $('cancelHotspot').onclick = cancelHotspot; $('cancelHotspotPlacement').onclick = cancelHotspot;
+
+        function renderHotspotList() {
+            const c = $('hotspotList'); c.innerHTML = ''; const sc = getCurrentScene();
+            if (!sc.hotspots || !sc.hotspots.length) return;
+            
+            sc.hotspots.forEach(hs => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 rounded-xl border border-white/5 bg-black/50 shadow-sm';
+                
+                let iconPrev = hs.customIconUrl ? `<img src="${hs.customIconUrl}" class="w-6 h-6 rounded-full object-cover">` : `<i class="fas ${hs.icon} text-cyan-400"></i>`;
+                let typeTxt = hs.contentType === '360' ? 'Foto 360' : (hs.contentType === 'image' ? 'Imagen Normal' : 'Texto Info');
+
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        ${iconPrev}
+                        <div class="truncate">
+                            <div class="text-[11px] font-bold text-white truncate">${escapeHTML(hs.title)}</div>
+                            <div class="text-[9px] text-cyan-200/70">${typeTxt}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button class="edit-btn text-cyan-400 p-1.5 hover:bg-white/10 rounded" title="Editar Contenido"><i class="fas fa-edit"></i></button>
+                        <button class="move-btn text-blue-400 p-1.5 hover:bg-white/10 rounded" title="Reubicar"><i class="fas fa-arrows-alt"></i></button>
+                        <button class="del-btn text-red-500 p-1.5 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                
+                div.querySelector('.del-btn').onclick = () => openDeleteModal('hotspot', hs.id, hs.title);
+                div.querySelector('.edit-btn').onclick = () => {
+                    editingHsId = hs.id;
+                    $('editHsTitle').value = hs.title || '';
+                    $('editHsDesc').value = hs.description || '';
+                    $('editHsIconFile').value = '';
+                    $('editHsContentFile').value = '';
+                    $('editHotspotModal').classList.add('active');
+                };
+                div.querySelector('.move-btn').onclick = () => {
+                    cancelDrawing(); cancelHotspot();
+                    movingHotspotId = hs.id;
+                    $('hotspotMenu').classList.remove('hidden'); $('startHotspot').classList.add('hidden');
+                    $('hotspotMenuText').innerHTML = `<i class="fas fa-arrows-alt mr-1"></i> Clic para reubicar <b>${escapeHTML(hs.title)}</b>.`;
+                    renderer.domElement.style.cursor = 'crosshair';
+                };
+                c.appendChild(div);
+            });
+        }
+
+        $('saveEditHsBtn').onclick = async () => {
+            const sc = getCurrentScene(); const hs = sc.hotspots.find(h => h.id === editingHsId);
+            if(!hs) return;
+
+            hs.title = $('editHsTitle').value.trim();
+            hs.description = $('editHsDesc').value.trim();
+            
+            const iFile = $('editHsIconFile').files[0];
+            const cFile = $('editHsContentFile').files[0];
+
+            try {
+                $('loading').classList.remove('hidden');
+                if(iFile) hs.customIconUrl = await uploadImageToImgBB(iFile);
+                if(cFile) hs.contentUrl = await uploadImageToImgBB(cFile);
+                
+                await saveStateToFirebase(); showToast("Punto actualizado", "success");
+                $('editHotspotModal').classList.remove('active');
+                rebuildLots(); renderHotspotList();
+            } catch(e) {
+                showToast("Error subiendo archivos", "error");
+            } finally {
+                $('loading').classList.add('hidden');
+            }
+        };
+
+        function cancelDrawing() {
+            isDrawing = false; drawingPoints = []; $('drawingMenu').classList.add('hidden'); $('lotForm').classList.add('hidden'); $('startDraw').classList.remove('hidden'); renderer.domElement.style.cursor = 'grab';
+            if (drawingLine) { scene3D.remove(drawingLine); drawingLine = null; }
+            $('lotName').value = ''; $('lotPrice').value = ''; $('lotArea').value = ''; $('lotDesc').value = ''; $('lotFile').value = ''; $('lotShadingCheck').checked = true;
+        }
+        $('startDraw').onclick = () => { cancelHotspot(); isDrawing = true; drawingPoints = []; $('drawingMenu').classList.remove('hidden'); $('startDraw').classList.add('hidden'); renderer.domElement.style.cursor = 'crosshair'; showToast("Haz clic en el entorno para trazar", "info"); };
+        $('cancelDraw').onclick = cancelDrawing;
+
+        async function createNewLot(status) {
+            if (drawingPoints.length < 3) return showToast("Dibuja al menos 3 puntos.", "error");
+            const name = $('lotName').value.trim() || 'Lote'; const price = $('lotPrice').value.trim();
+            const area = $('lotArea').value.trim(); const desc = $('lotDesc').value.trim();
+            const showShading = $('lotShadingCheck').checked;
+            const file = $('lotFile').files[0]; let url = "";
+            try {
+                $('loading').classList.remove('hidden');
+                if (file) url = await uploadImageToImgBB(file);
+                const sc = getCurrentScene(); if(!sc.lots) sc.lots = [];
+                sc.lots.push({ id: 'lot-' + Date.now(), name, price, area, desc, status, showShading, url, points: drawingPoints.map(p => ({x: p.x, y: p.y, z: p.z})) });
+                await saveStateToFirebase(); cancelDrawing(); showToast("Lote guardado", "success"); rebuildLots(); renderLotList();
+            } catch (error) { showToast(error.message, "error"); } finally { $('loading').classList.add('hidden'); }
+        }
+        $('saveAvailable').onclick = () => createNewLot('available'); $('saveProcess').onclick = () => createNewLot('proceso'); $('saveSold').onclick = () => createNewLot('sold');
+
+        function renderAllUI() { renderSceneListAdmin(); renderLotList(); renderHotspotList(); renderPublicCarousel(); }
+
+        function renderSceneListAdmin() {
+            const c = $('sceneListAdmin'); c.innerHTML = '';
+            state.scenes.forEach(sc => {
+                const isActive = sc.id === state.currentSceneId; const div = document.createElement('div');
+                div.className = `flex items-center justify-between p-2 rounded-xl border ${isActive ? 'bg-orange-600/30 border-orange-500/50' : 'bg-white/5 border-white/10 hover:bg-white/10'} transition-colors cursor-pointer`;
+                div.innerHTML = `<div class="flex-1 overflow-hidden" onclick="load360Scene('${sc.id}')"><div class="text-xs font-bold text-white truncate">${escapeHTML(sc.name)}</div><div class="text-[10px] text-orange-200/70">${(sc.lots||[]).length} áreas | ${(sc.hotspots||[]).length} pts</div></div>${state.scenes.length > 1 ? `<button class="del-btn text-red-400 hover:text-red-300 p-2"><i class="fas fa-trash"></i></button>` : ''}`;
+                if(state.scenes.length > 1) div.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); openDeleteModal('scene', sc.id, sc.name); };
+                c.appendChild(div);
+            });
+        }
+
+        function renderLotList() {
+            const c = $('lotList'); c.innerHTML = ''; const sc = getCurrentScene();
+            if (!sc.lots || !sc.lots.length) return;
+            sc.lots.forEach(lot => {
+                const isSold = lot.status === 'sold';
+                const isProcess = lot.status === 'proceso';
+                const colorClass = isSold ? 'bg-red-500 shadow-[0_0_10px_#ef4444]' : (isProcess?'bg-blue-500 shadow-[0_0_10px_#3b82f6]':'bg-green-500 shadow-[0_0_10px_#22c55e]');
+                const txtLabel = isSold ? 'Vendido' : (isProcess?'En Proceso':'Disp.');
+                
+                const div = document.createElement('div');
+                let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
+                div.className = 'flex items-center justify-between p-2.5 rounded-xl border border-white/5 bg-black/50 hover:bg-black/70 shadow-sm';
+                div.innerHTML = `<div class="flex items-center gap-3"><span class="w-3 h-3 rounded-full ${colorClass}"></span><div class="max-w-[150px]"><div class="text-[11px] font-bold text-white truncate">${escapeHTML(lot.name)}</div><div class="text-[9px] text-gray-400 flex gap-2"><span>${txtLabel}</span>${p?`<span class="text-orange-400 font-mono">${escapeHTML(p)}</span>`:''}</div></div></div><div class="flex gap-1"><button class="edit-btn text-orange-400 p-1.5 hover:bg-white/10 rounded"><i class="fas fa-edit"></i></button><button class="del-btn text-red-500 p-1.5 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button></div>`;
+                div.querySelector('.del-btn').onclick = () => openDeleteModal('lot', lot.id, lot.name);
+                div.querySelector('.edit-btn').onclick = () => { 
+                    editingLotId = lot.id; $('editName').value = lot.name; $('editPrice').value = p; 
+                    $('editArea').value = lot.area || ''; $('editDesc').value = lot.desc || ''; 
+                    $('editShadingCheck').checked = lot.showShading !== false;
+                    editStatusSelected = lot.status; updateEditStatusUI(); $('editModal').classList.add('active'); 
+                };
+                c.appendChild(div);
+            });
+        }
+
+        function renderPublicCarousel() {
+            const c = $('publicSceneCarousel'); c.innerHTML = '';
+            for (const sc of state.scenes) {
+                const isActive = sc.id === state.currentSceneId; const div = document.createElement('div');
+                div.className = `scene-card flex-shrink-0 w-28 h-16 rounded-xl cursor-pointer border-2 transition-all ${isActive ? 'border-orange-500 scale-105 shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'border-transparent hover:border-white/30 opacity-70 hover:opacity-100'} flex items-end justify-center pb-1`;
+                div.innerHTML = `<span class="relative z-10 text-[9px] font-bold text-center leading-tight px-1 drop-shadow-md text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.9);">${escapeHTML(sc.name)}</span>`;
+                div.onclick = () => load360Scene(sc.id); if (sc.url) div.style.backgroundImage = `url('${sc.url}')`; c.appendChild(div);
+            }
+        }
+
+        function navigateScenes(dir) {
+            const idx = state.scenes.findIndex(s => s.id === state.currentSceneId); let nextIdx = idx + dir;
+            if (nextIdx < 0) nextIdx = state.scenes.length - 1; if (nextIdx >= state.scenes.length) nextIdx = 0;
+            load360Scene(state.scenes[nextIdx].id);
+        }
+        $('btnPrevScene').onclick = () => navigateScenes(-1); $('btnNextScene').onclick = () => navigateScenes(1);
+
+        $('btnNewSceneForm').onclick = () => { $('sceneForm').classList.toggle('hidden'); $('sceneName').value = ''; $('sceneFile').value = ''; $('sceneMapsUrl').value = ''; };
+        $('cancelScene').onclick = () => $('sceneForm').classList.add('hidden');
+
+        $('saveScene').onclick = async () => {
+            const name = $('sceneName').value.trim() || 'Nuevo Visor'; const mapsUrl = $('sceneMapsUrl').value.trim();
+            const file = $('sceneFile').files[0]; if (!file) return showToast("Selecciona foto 360°", "warning");
+            try {
+                $('loading').classList.remove('hidden'); const url = await uploadImageToImgBB(file);
+                const newScene = { id: 'scene-' + Date.now(), name, url, mapsUrl, lots: [], hotspots: [] };
+                state.scenes.push(newScene); await saveStateToFirebase(); $('sceneForm').classList.add('hidden'); showToast("Visor 360° creado", "success");
+                load360Scene(newScene.id);
+            } catch (error) { showToast(error.message, "error"); } finally { $('loading').classList.add('hidden'); }
+        };
+
+        function openDeleteModal(type, id, name) {
+            deleteType = type; deleteId = id; $('deleteTitle').textContent = `¿Eliminar?`; $('deleteModal').classList.add('active');
+        }
+        $('cancelDeleteBtn').onclick = () => $('deleteModal').classList.remove('active');
+        $('confirmDeleteBtn').onclick = () => {
+            const sc = getCurrentScene();
+            if (deleteType === 'scene') { state.scenes = state.scenes.filter(s => s.id !== deleteId); if(state.currentSceneId === deleteId) state.currentSceneId = state.scenes[0].id; } 
+            else if (deleteType === 'lot') { sc.lots = sc.lots.filter(l => l.id !== deleteId); }
+            else if (deleteType === 'hotspot') { sc.hotspots = sc.hotspots.filter(h => h.id !== deleteId); }
+            saveStateToFirebase(); load360Scene(state.currentSceneId); $('deleteModal').classList.remove('active');
+        };
+
+        function updateEditStatusUI() {
+            $('btnSetAvailable').className = "flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all border-green-500 " + (editStatusSelected==='available'?"bg-green-500/20 text-green-400":"bg-transparent text-green-500 opacity-40");
+            $('btnSetProcess').className = "flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all border-blue-500 " + (editStatusSelected==='proceso'?"bg-blue-500/20 text-blue-400":"bg-transparent text-blue-500 opacity-40");
+            $('btnSetSold').className = "flex-1 py-2 rounded-lg text-[10px] font-bold border transition-all border-red-500 " + (editStatusSelected==='sold'?"bg-red-500/20 text-red-400":"bg-transparent text-red-500 opacity-40");
+        }
+        $('btnSetAvailable').onclick = () => { editStatusSelected = 'available'; updateEditStatusUI(); }; 
+        $('btnSetProcess').onclick = () => { editStatusSelected = 'proceso'; updateEditStatusUI(); }; 
+        $('btnSetSold').onclick = () => { editStatusSelected = 'sold'; updateEditStatusUI(); };
+        $('closeEditModal').onclick = () => $('editModal').classList.remove('active');
+        
+        $('saveEditBtn').onclick = () => {
+            const sc = getCurrentScene(); const lot = sc.lots.find(l => l.id === editingLotId);
+            if(lot) { 
+                lot.name = $('editName').value.trim(); 
+                lot.price = $('editPrice').value.trim(); 
+                lot.area = $('editArea').value.trim(); 
+                lot.desc = $('editDesc').value.trim(); 
+                lot.showShading = $('editShadingCheck').checked;
+                lot.status = editStatusSelected; 
+                saveStateToFirebase(); showToast("Actualizado", "success"); rebuildLots(); renderLotList(); 
+            }
+            $('editModal').classList.remove('active');
+        };
+
+        function logout() { isAdmin = false; $('modeIcon').className = "fas fa-eye text-orange-400"; $('modeText').textContent = 'Modo Público'; $('adminKnob').style.transform = 'translateX(0)'; $('toggleAdminBtn').classList.remove('ring-2', 'ring-orange-500'); $('sidebar').classList.remove('open'); cancelDrawing(); cancelHotspot(); showToast("Saliendo de edición", "info"); }
+        $('toggleAdminBtn').onclick = () => { if (!isAdmin) { $('loginModal').classList.add('active'); $('password').value = ''; setTimeout(() => $('password').focus(), 100); } else logout(); };
+        $('closeAdmin').onclick = () => $('sidebar').classList.remove('open'); $('logout').onclick = logout; $('cancelLogin').onclick = () => $('loginModal').classList.remove('active');
+        
+        $('loginBtn').onclick = () => {
+            if ($('password').value !== ADMIN_PASSWORD) return showToast("Clave incorrecta", "error");
+            $('loginModal').classList.remove('active'); isAdmin = true; $('modeIcon').className = "fas fa-tools text-orange-400"; $('modeText').textContent = 'Modo Edición'; $('adminKnob').style.transform = 'translateX(20px)'; $('toggleAdminBtn').classList.add('ring-2', 'ring-orange-500'); $('sidebar').classList.add('open'); showToast("Modo edición activo", "success");
+        };
+        $('password').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+        addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+        
+        function animate() {
+            requestAnimationFrame(animate); controls.update();
+            meshes.labels.forEach(x => {
+                const v = x.position.clone().project(camera);
+                if (v.z > 1) { x.element.style.display = 'none'; return; }
+                x.element.style.display = 'flex'; x.element.style.left = (v.x * 0.5 + 0.5) * innerWidth + 'px'; x.element.style.top = (v.y * -0.5 + 0.5) * innerHeight + 'px';
+            });
+            renderer.render(scene3D, camera);
+        }
+
+        window.onload = () => { initData(); animate(); };
+    </script>
+</body>
+</html>
