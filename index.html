@@ -247,17 +247,7 @@
                         <input type="file" id="sceneFile" accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 mb-3 cursor-pointer">
                         <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-map-marker-alt mr-1"></i>Link Google Maps (Opcional)</label>
                         <input id="sceneMapsUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-500 mb-3 text-white">
-                        
-                        <!-- CALIBRAR NORTE 360 (ESCENA NUEVA) -->
-                        <div class="border-t border-white/10 pt-2 mt-2">
-                            <label class="text-[10px] text-gray-400 flex justify-between mb-1">
-                                <span>Calibrar Norte (Girar imagen)</span>
-                                <span id="valSceneRot">0°</span>
-                            </label>
-                            <input type="range" id="sceneRot" min="-180" max="180" value="0" class="w-full accent-orange-500" oninput="document.getElementById('valSceneRot').innerText = this.value + '°';">
-                        </div>
-
-                        <div class="flex gap-2 mt-3">
+                        <div class="flex gap-2">
                             <button id="saveScene" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-lg py-2 text-xs font-bold">Crear</button>
                             <button id="cancelScene" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-xs font-bold">Cancelar</button>
                         </div>
@@ -352,8 +342,8 @@
                         </div>
 
                         <!-- Paleta de Color para Hotspots -->
-                        <div class="bg-indigo-900/10 p-2 rounded-lg border border-indigo-500/20 mb-2 mt-1">
-                            <label class="text-[10px] text-indigo-400 block mb-1"><i class="fas fa-palette mr-1"></i>Color del Hotspot</label>
+                        <div class="bg-indigo-900/10 p-2 rounded-lg border border-indigo-500/20 mb-1 mt-2">
+                            <label class="text-[10px] text-indigo-400 block mb-1"><i class="fas fa-palette mr-1"></i>Color del Hotspot (Si no hay icono)</label>
                             <input type="color" id="hsColor" value="#f97316" class="w-full h-8 bg-gray-900 border border-gray-700 rounded cursor-pointer">
                         </div>
 
@@ -553,16 +543,6 @@
                 <div><label class="text-[10px] text-gray-400 block mb-1">Nombre Escena</label><input id="editScName" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none"></div>
                 <div><label class="text-[10px] text-gray-400 block mb-1">Cambiar Foto 360° (Opcional)</label><input type="file" id="editScFile" accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 cursor-pointer mb-2"></div>
                 <div><label class="text-[10px] text-gray-400 block mb-1"><i class="fas fa-map-marker-alt text-blue-400 mr-1"></i> Link Google Maps</label><input id="editScMaps" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"></div>
-                
-                <!-- CALIBRAR NORTE 360 (EDITAR ESCENA) -->
-                <div class="border-t border-white/10 pt-2 mt-2">
-                    <label class="text-[10px] text-gray-400 flex justify-between mb-1">
-                        <span>Calibrar Norte (Girar imagen)</span>
-                        <span id="valEditScRot">0°</span>
-                    </label>
-                    <input type="range" id="editScRot" min="-180" max="180" value="0" class="w-full accent-orange-500" oninput="document.getElementById('valEditScRot').innerText = this.value + '°'; if(window.sphere) window.sphere.rotation.y = this.value * (Math.PI / 180);">
-                </div>
-
                 <div class="flex gap-2 mt-5 md:mt-6">
                     <button onclick="document.getElementById('editSceneModal').classList.remove('active')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-xl py-2.5 md:py-3 text-xs md:text-sm font-bold">Cancelar</button>
                     <button id="saveEditScBtn" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-2.5 md:py-3 text-xs md:text-sm font-bold shadow-lg">Guardar</button>
@@ -705,10 +685,10 @@
                     <input id="editHsIconUrl" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white focus:border-pink-500 outline-none" placeholder="O pega URL del icono">
                 </div>
 
-                <!-- NUEVO: PALETA DE COLOR PARA EDITAR HOTSPOT -->
+                <!-- Paleta de Color para Editar Hotspot -->
                 <div class="bg-indigo-900/10 p-2 rounded-lg border border-indigo-500/20 mt-2">
                     <label class="text-[10px] text-indigo-400 block mb-1"><i class="fas fa-palette mr-1"></i>Color del Hotspot (Si no hay icono)</label>
-                    <input type="color" id="editHsColor" value="#f97316" class="w-full h-8 bg-gray-900 border border-gray-600 rounded cursor-pointer">
+                    <input type="color" id="editHsColor" class="w-full h-8 bg-gray-900 border border-gray-600 rounded cursor-pointer">
                 </div>
 
             </div>
@@ -1004,6 +984,7 @@
 
                     scene3D.add(mesh); meshes.polygons.push(mesh);
                     
+                    // Etiqueta Inmediatamente Visible
                     const el = document.createElement('div'); el.className = 'marker-container pointer-events-none';
                     el.innerHTML = `
                         <div class="label3d">
@@ -1025,14 +1006,14 @@
                 UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(0, -400, 200) });
             }
 
-            // 3. Puntos de Información (Hotspots con Color Personalizable)
+            // 3. Puntos de Información (Hotspots) con Color Personalizado
             if(sc.hotspots) {
                 sc.hotspots.forEach(hs => {
                     const el = document.createElement('div'); el.className = 'marker-container hotspot-container interactive cursor-pointer';
                     
                     const hsColor = hs.color || '#f97316';
                     let iconContent = `<i class="fas fa-bullseye text-white text-xl md:text-2xl drop-shadow-lg"></i>`;
-                    let iconStyle = `background-color: ${hsColor}33; border: 2px solid ${hsColor}; box-shadow: 0 0 20px ${hsColor}99;`;
+                    let iconStyle = `background-color: ${hsColor}33; border: 2px solid ${hsColor}; box-shadow: 0 0 20px ${hsColor}B3;`;
 
                     if(hs.icon && hs.icon.trim() !== '') {
                         iconContent = `<img src="${escapeHTML(hs.icon)}" class="w-full h-full object-cover rounded-full" style="image-rendering: -webkit-optimize-contrast;">`;
@@ -1734,18 +1715,7 @@
                 const isActive = sc.id === state.currentSceneId; const div = document.createElement('div');
                 div.className = `flex items-center justify-between p-2 rounded-xl border ${isActive ? 'bg-orange-600/30 border-orange-500/50' : 'bg-white/5 border-white/10 hover:bg-white/10'} transition-colors cursor-pointer`;
                 div.innerHTML = `<div class="flex-1 overflow-hidden" onclick="load360Scene('${sc.id}')"><div class="text-xs font-bold text-white truncate">${escapeHTML(sc.name)}</div></div><div class="flex gap-1"><button class="edit-btn text-orange-400 hover:text-white p-2"><i class="fas fa-edit"></i></button>${state.scenes.length > 1 ? `<button class="del-btn text-red-400 hover:text-white p-2"><i class="fas fa-trash"></i></button>` : ''}</div>`;
-                
-                div.querySelector('.edit-btn').onclick = (e) => { 
-                    e.stopPropagation(); 
-                    $('editScName').value = sc.name; 
-                    $('editScMaps').value = sc.mapsUrl || ''; 
-                    $('editScFile').value = ''; 
-                    $('editScRot').value = sc.rotation || 0;
-                    $('valEditScRot').innerText = (sc.rotation || 0) + '°';
-                    state._editingSceneId = sc.id; 
-                    $('editSceneModal').classList.add('active'); 
-                };
-
+                div.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); $('editScName').value = sc.name; $('editScMaps').value = sc.mapsUrl || ''; $('editScFile').value = ''; state._editingSceneId = sc.id; $('editSceneModal').classList.add('active'); };
                 if(state.scenes.length > 1) div.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); openDeleteModal('scene', sc.id, sc.name); };
                 c.appendChild(div);
             });
@@ -1753,10 +1723,7 @@
 
         $('saveEditScBtn').onclick = async () => {
             const sc = state.scenes.find(s => s.id === state._editingSceneId); if(!sc) return;
-            sc.name = $('editScName').value.trim(); 
-            sc.mapsUrl = $('editScMaps').value.trim(); 
-            sc.rotation = parseInt($('editScRot').value) || 0;
-            const file = $('editScFile').files[0];
+            sc.name = $('editScName').value.trim(); sc.mapsUrl = $('editScMaps').value.trim(); const file = $('editScFile').files[0];
             try { 
                 $('loading').classList.remove('hidden'); 
                 if(file) { sc.url = await uploadImageToImgBB(file); }
@@ -1775,18 +1742,15 @@
         }
 
         function navigateScenes(dir) { const idx = state.scenes.findIndex(s => s.id === state.currentSceneId); let nextIdx = idx + dir; if (nextIdx < 0) nextIdx = state.scenes.length - 1; if (nextIdx >= state.scenes.length) nextIdx = 0; load360Scene(state.scenes[nextIdx].id); }
-        $('btnPrevScene').onclick = () => navigateScenes(-1); $('btnNextScene').onclick = () => navigateScenes(1);
+        $('btnPrevScene').onclick = () => navigateScenes(-1);$('btnNextScene').onclick = () => navigateScenes(1);
 
-        $('btnNewSceneForm').onclick = () => { $('sceneForm').classList.toggle('hidden'); $('sceneName').value = ''; $('sceneFile').value = ''; $('sceneMapsUrl').value = ''; };
-        $('cancelScene').onclick = () => $('sceneForm').classList.add('hidden');
-        $('saveScene').onclick = async () => {
+        $('btnNewSceneForm').onclick = () => {$('sceneForm').classList.toggle('hidden'); $('sceneName').value = '';$('sceneFile').value = ''; $('sceneMapsUrl').value = ''; };$('cancelScene').onclick = () => $('sceneForm').classList.add('hidden');$('saveScene').onclick = async () => {
             const name = $('sceneName').value.trim() || 'Nuevo Visor'; const mapsUrl = $('sceneMapsUrl').value.trim(); const file =$('sceneFile').files[0];
             if (!file) return showToast("Foto 360° obligatoria", "warning");
             try { 
                 $('loading').classList.remove('hidden'); 
                 const url = await uploadImageToImgBB(file); 
-                const rotation = parseInt($('sceneRot').value) || 0;
-                const newScene = { id: 'scene-' + Date.now(), name, url, mapsUrl, rotation, lots: [], hotspots: [], lines: [], customLabels: [] }; 
+                const newScene = { id: 'scene-' + Date.now(), name, url, mapsUrl, lots: [], hotspots: [], lines: [], customLabels: [] }; 
                 state.scenes.push(newScene); await saveStateToFirebase(); $('sceneForm').classList.add('hidden'); showToast("Visor creado", "success"); load360Scene(newScene.id); 
             } catch (e) { showToast(e.message, "error"); } finally { $('loading').classList.add('hidden'); }
         };
@@ -1810,7 +1774,7 @@
         };
         
         $('closePublicSidebar').onclick = () => { 
-            $('publicSidebar').classList.remove('open');$('btnOpenPublicSidebar').classList.remove('hidden');
+            $('publicSidebar').classList.remove('open');$('btnOpenPublicSidebar').classList.add('hidden');
         };
 
         function logout() { 
@@ -1842,7 +1806,7 @@
             if ($('password').value !== state.adminPassword) return showToast("Clave incorrecta", "error");
             $('loginModal').classList.remove('active'); isAdmin = true; $('modeIcon').className = "fas fa-tools text-orange-400"; 
             $('modeText').textContent = 'Modo Edición'; $('adminKnob').style.transform = 'translateX(20px)';$('toggleAdminBtn').classList.add('border-orange-500'); 
-            $('publicSidebar').classList.remove('open');$('btnOpenPublicSidebar').classList.remove('hidden');
+            $('publicSidebar').classList.remove('open');$('btnOpenPublicSidebar').classList.add('hidden');
             $('sidebar').classList.add('open');$('btnMaximizeAdmin').classList.add('hidden'); 
             showToast("Modo Edición Activado", "success");
         };
