@@ -49,8 +49,10 @@
         .custom-label { background: rgba(15,23,42,0.9); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 20px rgba(0,0,0,0.5); pointer-events: auto; font-weight: bold; white-space: nowrap; transition: transform 0.2s; }
         .custom-label:hover { transform: scale(1.05); }
 
-        /* Tooltip Mini al hacer hover sobre Lotes */
-        #miniTooltip { position: fixed; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.1s ease-out; }
+        /* Tooltip Lotes con Info Completa */
+        #tooltip { position: fixed; z-index: 100; min-width: 200px; max-width: 280px; transform: translate(-50%, -125%); opacity: 0; pointer-events: none; padding: 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(249, 115, 22, 0.5); box-shadow: 0 15px 35px rgba(0,0,0,0.6); transition: opacity 0.15s ease-out; }
+        #tooltip img { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; cursor: pointer; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); image-rendering: -webkit-optimize-contrast; }
+        #tooltip img:hover { opacity: 0.9; border-color: #f97316; }
         
         .modal-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity 0.3s; padding: 10px; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
@@ -71,6 +73,7 @@
         .snap-start { scroll-snap-align: start; }
 
         @media (max-width: 768px) {
+            #tooltip { transform: translate(-50%, -150%); }
             .carousel-container { max-width: calc(100vw - 90px) !important; }
         }
     </style>
@@ -78,9 +81,6 @@
 <body>
     <div id="canvas"></div>
     <div id="labels" class="fixed inset-0 z-10 pointer-events-none overflow-hidden"></div>
-    
-    <!-- Tooltip Mini al Hover -->
-    <div id="miniTooltip" class="px-3 py-1.5 rounded-full bg-black/80 border border-orange-500/50 text-white text-[10px] md:text-xs font-bold whitespace-nowrap shadow-lg backdrop-blur-md transform -translate-x-1/2 -translate-y-8"></div>
 
     <!-- Brújula Mejorada Dinámica -->
     <div id="compass" class="fixed top-24 right-4 md:right-6 w-14 h-14 md:w-16 md:h-16 glass rounded-full flex items-center justify-center z-20 shadow-[0_0_20px_rgba(0,0,0,0.8)] pointer-events-none border border-white/20 bg-gradient-to-br from-slate-900 to-black">
@@ -1253,7 +1253,6 @@
             }
 
             if(!inSubScene) {
-                const mt = $('miniTooltip');
                 const hit = raycaster.intersectObjects(meshes.polygons)[0];
                 
                 if (!hit) {
@@ -1261,7 +1260,7 @@
                         const l = hoveredMesh.userData.lot; 
                         hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0);
                     }
-                    hoveredMesh = null; mt.style.opacity = '0';
+                    hoveredMesh = null; 
                     renderer.domElement.style.cursor = (isDrawing||isDrawingHotspot||movingHotspotId||isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab'; return;
                 }
                 
@@ -1273,11 +1272,6 @@
                     }
                     hoveredMesh = mesh; hoveredMesh.material.opacity = 0.8; 
                 }
-
-                mt.textContent = mesh.userData.lot.name;
-                mt.style.left = e.clientX + 'px'; mt.style.top = e.clientY + 'px';
-                mt.style.opacity = '1';
-
             } else {
                 renderer.domElement.style.cursor = (isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab';
             }
@@ -1298,7 +1292,6 @@
                 if (hitLot) {
                     const lot = hitLot.object.userData.lot;
                     openLotInfoModal(lot);
-                    $('miniTooltip').style.opacity = '0';
                     return;
                 }
             }
@@ -2052,4 +2045,5 @@
     </script>
 </body>
 </html>
+
 ```eof
