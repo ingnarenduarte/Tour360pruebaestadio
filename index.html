@@ -35,7 +35,7 @@
         /* Animaciones Puntos Interactivos */
         .hotspot-icon { font-size: 32px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); transition: transform 0.2s; }
         .hotspot-container:hover .hotspot-icon { transform: scale(1.15) translateY(-5px); }
-        .hotspot-pulse { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: rgba(249, 115, 22, 0.5); z-index: -1; animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .hotspot-pulse { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: -1; animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
         @keyframes ping-slow { 75%, 100% { transform: scale(2); opacity: 0; } }
         @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
@@ -101,8 +101,8 @@
     </div>
 
     <div id="btnBackToScene" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-50 interactive">
-        <button onclick="exitHotspot360()" class="glass px-5 md:px-6 py-2 md:py-3 rounded-full text-white font-bold text-xs md:text-sm border-orange-500/50 hover:bg-orange-600/50 transition-colors shadow-2xl flex items-center gap-2">
-            <i class="fas fa-arrow-left"></i> Volver a la Escena
+        <button onclick="exitHotspot360()" class="glass px-5 md:px-6 py-2 md:py-3 rounded-full text-white font-bold text-xs md:text-sm border-blue-500/50 hover:bg-blue-600/50 transition-colors shadow-2xl flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Volver a la Escena Principal
         </button>
     </div>
     
@@ -145,15 +145,22 @@
 
     <!-- Info Hotspot Modal -->
     <div id="infoHotspotModal" class="modal-overlay interactive" onclick="if(event.target === this) this.classList.remove('active')">
-        <div class="glass rounded-2xl p-6 w-[95%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90 text-center">
-            <div id="hsModalIconContainer" class="w-16 h-16 mx-auto rounded-full bg-orange-900/50 border border-orange-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.3)] mb-4 overflow-hidden">
-                <i id="hsModalIcon" class="fas fa-info-circle text-orange-400 text-2xl"></i>
-            </div>
+        <div class="glass rounded-2xl p-6 w-[95%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90 text-center flex flex-col max-h-[90vh]">
             <h2 id="hsModalTitle" class="text-xl font-bold text-white leading-tight mb-2"></h2>
-            <div class="max-h-[50vh] overflow-y-auto scroll px-2 bg-black/40 rounded-lg p-3 border border-white/5 text-left">
+            
+            <div class="overflow-y-auto scroll px-2 bg-black/40 rounded-lg p-3 border border-white/5 text-left flex-1 mb-4">
                 <p id="hsModalDesc" class="text-sm text-gray-300 whitespace-pre-wrap"></p>
+                
+                <div id="hsModalGalleryWrapper" class="mt-3 hidden border-t border-white/10 pt-3">
+                    <p class="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wider">Galería de Imágenes</p>
+                    <div id="hsModalGallery" class="flex gap-2 overflow-x-auto scroll snap-x pb-2"></div>
+                </div>
             </div>
-            <button class="mt-5 w-full bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors" onclick="document.getElementById('infoHotspotModal').classList.remove('active')">Cerrar</button>
+            
+            <div class="flex gap-2 shrink-0">
+                <button id="hsModalBtn360" class="hidden flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors"><i class="fas fa-vr-cardboard mr-2"></i>Entrar 360°</button>
+                <button class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors" onclick="document.getElementById('infoHotspotModal').classList.remove('active')">Cerrar</button>
+            </div>
         </div>
     </div>
 
@@ -235,7 +242,7 @@
                 <hr class="border-orange-500/20">
 
                 <!-- 1. Escenas -->
-                <section>
+                <section id="adminSectionScenes">
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-orange-400 font-bold"><i class="fas fa-globe mr-2"></i>Escenas 360°</h3>
                         <button id="btnNewSceneForm" class="bg-orange-600/20 text-orange-500 hover:bg-orange-600 hover:text-white transition-colors px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border border-orange-500/30"><i class="fas fa-plus mr-1"></i>Añadir</button>
@@ -253,11 +260,11 @@
                         </div>
                     </div>
                     <div id="sceneListAdmin" class="space-y-2 md:space-y-3"></div>
+                    <hr class="border-orange-500/20 mt-5">
                 </section>
-                <hr class="border-orange-500/20">
 
                 <!-- 2. Lotes / Áreas -->
-                <section>
+                <section id="adminSectionLots">
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-green-400 font-bold"><i class="fas fa-draw-polygon mr-2"></i>Áreas / Lotes</h3>
                         <button id="startDraw" class="bg-green-600 hover:bg-green-500 text-white transition-colors px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg flex items-center uppercase"><i class="fas fa-plus mr-1"></i> Trazar</button>
@@ -299,11 +306,11 @@
                         </div>
                     </div>
                     <div id="lotList" class="space-y-2"></div>
+                    <hr class="border-orange-500/20 mt-5">
                 </section>
-                <hr class="border-orange-500/20">
 
                 <!-- 3. Puntos de Información -->
-                <section>
+                <section id="adminSectionHotspots">
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-orange-400 font-bold"><i class="fas fa-bullseye mr-2"></i>Puntos/Hotspots</h3>
                         <button id="startHotspot" class="bg-orange-900/50 text-orange-400 hover:bg-orange-800 hover:text-white transition-colors px-3 py-1 rounded-md text-[10px] font-bold uppercase border border-orange-700/50">+ CREAR</button>
@@ -314,40 +321,45 @@
                     </div>
                     <div id="hotspotForm" class="hidden bg-black/60 border border-orange-500/40 rounded-xl p-3 mb-3 relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-amber-500"></div>
-                        <label class="text-[10px] text-gray-400 block mb-1 mt-1">Título</label>
-                        <input id="hsTitle" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-2" placeholder="Ej. Zona Verde">
                         
-                        <label class="text-[10px] text-gray-400 block mb-1">Tipo de Acción</label>
-                        <select id="hsActionType" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white mb-2 outline-none focus:border-orange-500" onchange="document.getElementById('hsTargetGroup').style.display = this.value === 'text' ? 'none' : 'block'; document.getElementById('hsDescGroup').style.display = this.value === 'text' ? 'block' : 'none';">
-                            <option value="text">Mostrar Texto de Información</option>
-                            <option value="image">Abrir Imagen (Normal)</option>
-                            <option value="360">Entrar a Escena 360</option>
-                        </select>
-
-                        <div id="hsDescGroup">
-                            <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
-                            <textarea id="hsDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-2 resize-none" placeholder="Detalles del punto..."></textarea>
-                        </div>
-
-                        <div id="hsTargetGroup" style="display:none;" class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20 mb-2">
-                            <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-file-upload mr-1"></i>Archivo Destino (Imagen o 360)</label>
-                            <input type="file" id="hsTargetFile" accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
-                            <input id="hsTargetUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-blue-500 text-white" placeholder="O pega URL de la imagen">
-                            
-                            <!-- NUEVO: SLIDER CALIBRAR NORTE 360 (CREAR HOTSPOT 360) -->
-                            <div class="border-t border-purple-500/20 pt-2 mt-2">
-                                <label class="text-[10px] text-purple-400 flex justify-between mb-1">
-                                    <span>Calibrar Norte 360°</span>
-                                    <span id="valHsRot360">0°</span>
-                                </label>
-                                <input type="range" id="hsRot360" min="-180" max="180" value="0" class="w-full accent-purple-500" oninput="document.getElementById('valHsRot360').innerText = this.value + '°';">
+                        <div class="grid grid-cols-[1fr_auto] gap-2 items-center mb-2 mt-1">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">Título</label>
+                                <input id="hsTitle" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white" placeholder="Ej. Zona Verde">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">Color</label>
+                                <input type="color" id="hsColor" value="#f97316" class="w-10 h-[30px] bg-gray-900 border border-gray-700 rounded-lg cursor-pointer">
                             </div>
                         </div>
 
-                        <div class="bg-pink-900/10 p-2 rounded-lg border border-pink-500/20 mb-1">
+                        <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
+                        <textarea id="hsDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-3 resize-none" placeholder="Detalles del punto..."></textarea>
+                        
+                        <div class="bg-pink-900/10 p-2 rounded-lg border border-pink-500/20 mb-3">
                             <label class="text-[10px] text-pink-400 block mb-1"><i class="fas fa-image mr-1"></i>Icono del Punto (Opcional)</label>
                             <input type="file" id="hsIconFile" accept="image/jpeg, image/png, image/svg+xml" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
                             <input id="hsIconUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-pink-500 text-white" placeholder="O pega URL del icono">
+                        </div>
+
+                        <div class="bg-purple-900/10 p-2 rounded-lg border border-purple-500/20 mb-3">
+                            <label class="text-[10px] text-purple-400 block mb-1"><i class="fas fa-images mr-1"></i>Galería de Imágenes (Opcional)</label>
+                            <input type="file" id="hsGalleryFiles" multiple accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 cursor-pointer">
+                        </div>
+
+                        <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20 mb-2">
+                            <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-vr-cardboard mr-1"></i>Entorno 360° (Opcional)</label>
+                            <input type="file" id="hs360File" accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
+                            <input id="hs360Url" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-blue-500 text-white mb-2" placeholder="O pega URL de la imagen 360">
+                            
+                            <!-- SLIDER CALIBRAR NORTE 360 -->
+                            <div class="border-t border-blue-500/20 pt-2">
+                                <label class="text-[10px] text-blue-400 flex justify-between mb-1">
+                                    <span>Calibrar Norte 360°</span>
+                                    <span id="valHsRot360">0°</span>
+                                </label>
+                                <input type="range" id="hsRot360" min="-180" max="180" value="0" class="w-full accent-blue-500" oninput="document.getElementById('valHsRot360').innerText = this.value + '°';">
+                            </div>
                         </div>
 
                         <div class="flex gap-2 mt-3">
@@ -356,8 +368,8 @@
                         </div>
                     </div>
                     <div id="hotspotList" class="space-y-2"></div>
+                    <hr class="border-orange-500/20 mt-5">
                 </section>
-                <hr class="border-orange-500/20">
 
                 <!-- 4. Líneas Libres 3D -->
                 <section>
@@ -547,7 +559,6 @@
                 <div><label class="text-[10px] text-gray-400 block mb-1">Cambiar Foto 360° (Opcional)</label><input type="file" id="editScFile" accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 cursor-pointer mb-2"></div>
                 <div><label class="text-[10px] text-gray-400 block mb-1"><i class="fas fa-map-marker-alt text-blue-400 mr-1"></i> Link Google Maps</label><input id="editScMaps" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"></div>
                 
-                <!-- NUEVO: SLIDER CALIBRAR NORTE 360 (ESCENA PRINCIPAL) -->
                 <div class="border-t border-white/10 pt-2 mt-2">
                     <label class="text-[10px] text-gray-400 flex justify-between mb-1">
                         <span>Calibrar Norte (Girar imagen)</span>
@@ -670,41 +681,46 @@
         <div class="glass rounded-2xl p-5 md:p-6 w-[95%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90">
             <h2 class="text-base md:text-lg font-bold text-white mb-3 md:mb-4 border-b border-orange-500/30 pb-2"><i class="fas fa-bullseye text-orange-500 mr-2"></i> Editar Punto/Hotspot</h2>
             <div class="space-y-3 mt-2 max-h-[65vh] overflow-y-auto scroll pr-2">
-                <div><label class="text-[10px] text-gray-400 block mb-1">Título</label><input id="editHsTitle" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none"></div>
+                
+                <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Título</label>
+                        <input id="editHsTitle" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Color</label>
+                        <input type="color" id="editHsColor" class="w-10 h-[38px] bg-gray-900 border border-gray-600 rounded-lg cursor-pointer">
+                    </div>
+                </div>
                 
                 <div>
-                    <label class="text-[10px] text-gray-400 block mb-1">Tipo de Acción</label>
-                    <select id="editHsActionType" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white mb-1 outline-none focus:border-orange-500" onchange="document.getElementById('editHsTargetGroup').style.display = this.value === 'text' ? 'none' : 'block'; document.getElementById('editHsDescGroup').style.display = this.value === 'text' ? 'block' : 'none';">
-                        <option value="text">Mostrar Texto de Información</option>
-                        <option value="image">Abrir Imagen (Normal)</option>
-                        <option value="360">Entrar a Escena 360</option>
-                    </select>
-                </div>
-
-                <div id="editHsDescGroup">
                     <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
                     <textarea id="editHsDesc" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-orange-500 outline-none resize-none"></textarea>
-                </div>
-
-                <div id="editHsTargetGroup" style="display:none;" class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20">
-                    <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-file-upload mr-1"></i>Cambiar Archivo Destino</label>
-                    <input type="file" id="editHsTargetFile" accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 mb-1 cursor-pointer">
-                    <input id="editHsTargetUrl" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white focus:border-blue-500 outline-none" placeholder="O pega la URL aquí">
-                    
-                    <!-- NUEVO: SLIDER CALIBRAR NORTE 360 (EDITAR HOTSPOT 360) -->
-                    <div id="editHsRotGroup" class="border-t border-purple-500/20 pt-2 mt-2" style="display:none;">
-                        <label class="text-[10px] text-purple-400 flex justify-between mb-1">
-                            <span>Calibrar Norte 360°</span>
-                            <span id="valEditHsRot360">0°</span>
-                        </label>
-                        <input type="range" id="editHsRot360" min="-180" max="180" value="0" class="w-full accent-purple-500" oninput="document.getElementById('valEditHsRot360').innerText = this.value + '°'; if(typeof window.sphere !== 'undefined' && inSubScene && currentSubSceneHotspotId === editingHsId) window.sphere.rotation.y = this.value * (Math.PI / 180);">
-                    </div>
                 </div>
 
                 <div class="bg-pink-900/10 p-2 rounded-lg border border-pink-500/20 mt-2">
                     <label class="text-[10px] text-pink-400 block mb-1"><i class="fas fa-image mr-1"></i>Cambiar Icono</label>
                     <input type="file" id="editHsIconFile" accept="image/jpeg, image/png, image/svg+xml" class="w-full text-xs text-gray-400 mb-1 cursor-pointer">
                     <input id="editHsIconUrl" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white focus:border-pink-500 outline-none" placeholder="O pega URL del icono">
+                </div>
+
+                <div class="bg-purple-900/10 p-2 rounded-lg border border-purple-500/20 mt-2">
+                    <label class="text-[10px] text-purple-400 block mb-1"><i class="fas fa-images mr-1"></i>Agregar a Galería (Opcional)</label>
+                    <input type="file" id="editHsGalleryFiles" multiple accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 cursor-pointer">
+                </div>
+
+                <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20 mt-2">
+                    <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-vr-cardboard mr-1"></i>Cambiar Entorno 360°</label>
+                    <input type="file" id="editHs360File" accept="image/jpeg, image/png" class="w-full text-xs text-gray-400 mb-1 cursor-pointer">
+                    <input id="editHs360Url" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white focus:border-blue-500 outline-none mb-2" placeholder="O pega la URL aquí">
+                    
+                    <div class="border-t border-purple-500/20 pt-2">
+                        <label class="text-[10px] text-purple-400 flex justify-between mb-1">
+                            <span>Calibrar Norte 360°</span>
+                            <span id="valEditHsRot360">0°</span>
+                        </label>
+                        <input type="range" id="editHsRot360" min="-180" max="180" value="0" class="w-full accent-purple-500" oninput="document.getElementById('valEditHsRot360').innerText = this.value + '°'; if(typeof window.sphere !== 'undefined' && inSubScene && currentSubSceneHotspotId === editingHsId) window.sphere.rotation.y = this.value * (Math.PI / 180);">
+                    </div>
                 </div>
 
             </div>
@@ -914,6 +930,14 @@
 
         function load360Scene(sceneId) {
             inSubScene = false; currentSubSceneHotspotId = null; $('btnBackToScene').classList.add('hidden');
+            
+            // Re-mostrar las opciones de creación de Lotes y Hotspots al salir de la subescena
+            if($('adminSectionScenes')) {
+                $('adminSectionScenes').style.display = 'block';
+                $('adminSectionLots').style.display = 'block';
+                $('adminSectionHotspots').style.display = 'block';
+            }
+
             if(isEditingVertices) endVertexEditing();
             if(isEditingVerticesLine) endVertexEditingLine();
             
@@ -987,88 +1011,121 @@
         function rebuildLots() {
             clear3D(); const sc = getCurrentScene(); if(!sc) return;
             
-            // Si estamos en una sub-escena 360, no mostramos lotes principales
-            if (inSubScene) return;
+            let linesToRender = sc.lines || [];
+            let labelsToRender = sc.customLabels || [];
 
-            // 1. Lotes (Polígonos y Etiquetas)
-            if(sc.lots) {
-                sc.lots.forEach(lot => {
-                    if (!lot.points || lot.points.length < 3) return;
-                    const v = lot.points.map(p => new THREE.Vector3(p.x, p.y, p.z));
-                    const c = new THREE.Vector3(); v.forEach(x => c.add(x)); c.divideScalar(v.length); c.normalize().multiplyScalar(498);
-                    
-                    const lotColorHex = lot.color || getStatusDefaultColor(lot.status);
-                    const lotOpacity = lot.opacity !== undefined ? parseFloat(lot.opacity)/100 : (lot.showShading !== false ? 0.35 : 0.0);
-                    
-                    const verts = [];
-                    for (let i = 0; i < v.length; i++) {
-                        const p1 = v[i].clone().normalize().multiplyScalar(498), p2 = v[(i+1)%v.length].clone().normalize().multiplyScalar(498);
-                        verts.push(c.x, c.y, c.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
-                    }
-                    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); geo.computeVertexNormals();
-                    const mat = new THREE.MeshBasicMaterial({ color: lotColorHex, transparent: true, opacity: lotOpacity, side: THREE.DoubleSide, depthWrite: false });
-                    const mesh = new THREE.Mesh(geo, mat); mesh.userData.lot = lot;
-                    
-                    const linePts = [...v.map(p => p.clone().normalize().multiplyScalar(498)), v[0].clone().normalize().multiplyScalar(498)];
-                    const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
-                    const lineMat = new THREE.LineBasicMaterial({ color: lotColorHex, linewidth: 2, transparent: true, opacity: 1.0 });
-                    mesh.add(new THREE.Line(lineGeo, lineMat));
-
-                    scene3D.add(mesh); meshes.polygons.push(mesh);
-                    
-                    const el = document.createElement('div'); el.className = 'marker-container pointer-events-none';
-                    el.innerHTML = `
-                        <div class="label3d">
-                            <div class="label-header cursor-pointer">
-                                <span class="dot" style="background-color: ${lotColorHex}; box-shadow: 0 0 15px ${lotColorHex}; border: 2px solid white;"></span>
-                                <span class="text-white text-[10px] md:text-xs font-bold whitespace-nowrap drop-shadow-md pr-1">${escapeHTML(lot.name)}</span>
-                            </div>
-                        </div>
-                    `;
-                    UI.labels.appendChild(el); meshes.labels.push({ element: el, position: c.clone().normalize().multiplyScalar(450) });
-                });
+            // Si estamos en una sub-escena 360, asignamos las colecciones del Hotspot actual
+            if (inSubScene) {
+                const hs = sc.hotspots.find(h => h.id === currentSubSceneHotspotId);
+                if(hs) {
+                    linesToRender = hs.lines || [];
+                    labelsToRender = hs.customLabels || [];
+                }
             }
 
-            // 2. Google Maps Pin
-            if(sc.mapsUrl) {
-                const el = document.createElement('div'); el.className = 'marker-container pointer-events-auto cursor-pointer group';
-                el.innerHTML = `<i class="fas fa-map-marker-alt text-blue-500 map-pin"></i><div class="bg-blue-600/90 text-white text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-blue-400">Ver Ubicación</div>`;
-                el.onclick = () => window.open(sc.mapsUrl, '_blank');
-                UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(0, -400, 200) });
-            }
-
-            // 3. Puntos de Información (Hotspots)
-            if(sc.hotspots) {
-                sc.hotspots.forEach(hs => {
-                    const el = document.createElement('div'); el.className = 'marker-container hotspot-container interactive cursor-pointer';
-                    
-                    let iconContent = `<i class="fas fa-bullseye text-orange-300 text-xl md:text-2xl drop-shadow-lg"></i>`;
-                    if(hs.icon && hs.icon.trim() !== '') {
-                        iconContent = `<img src="${escapeHTML(hs.icon)}" class="w-full h-full object-cover rounded-full" style="image-rendering: -webkit-optimize-contrast;">`;
-                    }
-
-                    let iconHTML = `<div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-orange-500/20 border-2 border-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.7)] flex items-center justify-center mb-2 hotspot-icon transition-transform backdrop-blur-sm overflow-hidden">${iconContent}</div>`;
-                    
-                    el.innerHTML = `<div class="hotspot-pulse bg-orange-500/50"></div>${iconHTML}<div class="label3d bg-black/80 border border-orange-500/50 shadow-xl px-3 py-1 mt-1 rounded-full"><span class="text-white text-[9px] md:text-[10px] font-bold whitespace-nowrap tracking-wider uppercase">${escapeHTML(hs.title)}</span></div>`;
-                    
-                    el.onclick = () => {
-                        if (hs.actionType === 'image' && hs.targetUrl) {
-                            openFullGallery([hs.targetUrl]);
-                        } else if (hs.actionType === '360' && hs.targetUrl) {
-                            loadSubScene(hs.targetUrl, hs.title, hs.id);
-                        } else {
-                            $('hsModalTitle').textContent = hs.title;
-                            $('hsModalDesc').textContent = hs.desc || '';
-                            $('infoHotspotModal').classList.add('active');
+            // Si NO estamos en una subescena, mostramos Lotes, Puntos y Pin de Mapas
+            if (!inSubScene) {
+                // 1. Lotes (Polígonos y Etiquetas)
+                if(sc.lots) {
+                    sc.lots.forEach(lot => {
+                        if (!lot.points || lot.points.length < 3) return;
+                        const v = lot.points.map(p => new THREE.Vector3(p.x, p.y, p.z));
+                        const c = new THREE.Vector3(); v.forEach(x => c.add(x)); c.divideScalar(v.length); c.normalize().multiplyScalar(498);
+                        
+                        const lotColorHex = lot.color || getStatusDefaultColor(lot.status);
+                        const lotOpacity = lot.opacity !== undefined ? parseFloat(lot.opacity)/100 : (lot.showShading !== false ? 0.35 : 0.0);
+                        
+                        const verts = [];
+                        for (let i = 0; i < v.length; i++) {
+                            const p1 = v[i].clone().normalize().multiplyScalar(498), p2 = v[(i+1)%v.length].clone().normalize().multiplyScalar(498);
+                            verts.push(c.x, c.y, c.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
                         }
-                    };
-                    UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(hs.position.x, hs.position.y, hs.position.z) });
-                });
+                        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); geo.computeVertexNormals();
+                        const mat = new THREE.MeshBasicMaterial({ color: lotColorHex, transparent: true, opacity: lotOpacity, side: THREE.DoubleSide, depthWrite: false });
+                        const mesh = new THREE.Mesh(geo, mat); mesh.userData.lot = lot;
+                        
+                        const linePts = [...v.map(p => p.clone().normalize().multiplyScalar(498)), v[0].clone().normalize().multiplyScalar(498)];
+                        const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+                        const lineMat = new THREE.LineBasicMaterial({ color: lotColorHex, linewidth: 2, transparent: true, opacity: 1.0 });
+                        mesh.add(new THREE.Line(lineGeo, lineMat));
+
+                        scene3D.add(mesh); meshes.polygons.push(mesh);
+                        
+                        const el = document.createElement('div'); el.className = 'marker-container pointer-events-none';
+                        el.innerHTML = `
+                            <div class="label3d">
+                                <div class="label-header cursor-pointer">
+                                    <span class="dot" style="background-color: ${lotColorHex}; box-shadow: 0 0 15px ${lotColorHex}; border: 2px solid white;"></span>
+                                    <span class="text-white text-[10px] md:text-xs font-bold whitespace-nowrap drop-shadow-md pr-1">${escapeHTML(lot.name)}</span>
+                                </div>
+                            </div>
+                        `;
+                        UI.labels.appendChild(el); meshes.labels.push({ element: el, position: c.clone().normalize().multiplyScalar(450) });
+                    });
+                }
+
+                // 2. Google Maps Pin
+                if(sc.mapsUrl) {
+                    const el = document.createElement('div'); el.className = 'marker-container pointer-events-auto cursor-pointer group';
+                    el.innerHTML = `<i class="fas fa-map-marker-alt text-blue-500 map-pin"></i><div class="bg-blue-600/90 text-white text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-blue-400">Ver Ubicación</div>`;
+                    el.onclick = () => window.open(sc.mapsUrl, '_blank');
+                    UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(0, -400, 200) });
+                }
+
+                // 3. Puntos de Información (Hotspots Modificados para Combine)
+                if(sc.hotspots) {
+                    sc.hotspots.forEach(hs => {
+                        const el = document.createElement('div'); el.className = 'marker-container hotspot-container interactive cursor-pointer';
+                        
+                        const hsColorHex = hs.color || '#f97316';
+                        let iconContent = `<i class="fas fa-bullseye text-white text-xl md:text-2xl drop-shadow-lg"></i>`;
+                        if(hs.icon && hs.icon.trim() !== '') {
+                            iconContent = `<img src="${escapeHTML(hs.icon)}" class="w-full h-full object-cover rounded-full" style="image-rendering: -webkit-optimize-contrast;">`;
+                        }
+
+                        let iconHTML = `<div class="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 shadow-[0_0_20px_rgba(0,0,0,0.7)] flex items-center justify-center mb-2 hotspot-icon transition-transform backdrop-blur-sm overflow-hidden" style="background-color: ${hsColorHex}40; border-color: ${hsColorHex}; box-shadow: 0 0 20px ${hsColorHex}aa;">${iconContent}</div>`;
+                        
+                        el.innerHTML = `<div class="hotspot-pulse" style="background-color: ${hsColorHex}99;"></div>${iconHTML}<div class="label3d bg-black/80 border shadow-xl px-3 py-1 mt-1 rounded-full" style="border-color: ${hsColorHex}80;"><span class="text-white text-[9px] md:text-[10px] font-bold whitespace-nowrap tracking-wider uppercase">${escapeHTML(hs.title)}</span></div>`;
+                        
+                        el.onclick = () => {
+                            $('hsModalTitle').textContent = hs.title || 'Punto de Información';
+                            $('hsModalDesc').textContent = hs.desc || '';
+                            
+                            // Galería dinámica
+                            const galWrap = $('hsModalGalleryWrapper');
+                            const gal = $('hsModalGallery');
+                            if(hs.gallery && hs.gallery.length > 0) {
+                                gal.innerHTML = '';
+                                hs.gallery.forEach(url => {
+                                    gal.innerHTML += `<img src="${url}" class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg shrink-0 cursor-pointer border border-white/20 hover:border-orange-500 shadow-md" onclick="openFullGallery(${JSON.stringify(hs.gallery).replace(/"/g, '&quot;')}); event.stopPropagation();">`;
+                                });
+                                galWrap.classList.remove('hidden');
+                            } else {
+                                galWrap.classList.add('hidden');
+                            }
+
+                            // Botón 360
+                            const btn360 = $('hsModalBtn360');
+                            if(hs.targetUrl360 && hs.targetUrl360.trim() !== '') {
+                                btn360.classList.remove('hidden');
+                                btn360.onclick = () => {
+                                    $('infoHotspotModal').classList.remove('active');
+                                    loadSubScene(hs.targetUrl360, hs.title, hs.id);
+                                };
+                            } else {
+                                btn360.classList.add('hidden');
+                            }
+
+                            $('infoHotspotModal').classList.add('active');
+                        };
+                        UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(hs.position.x, hs.position.y, hs.position.z) });
+                    });
+                }
             }
 
-            // 4. Líneas 3D Guardadas
-            if(sc.lines) {
-                sc.lines.forEach(line => {
+            // 4. Líneas 3D Guardadas (Globales o del Hotspot actual)
+            if(linesToRender) {
+                linesToRender.forEach(line => {
                     if(!line.points || line.points.length < 2) return;
                     const pts = line.points.map(p => new THREE.Vector3(p.x, p.y, p.z));
                     const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0);
@@ -1080,9 +1137,9 @@
                 });
             }
 
-            // 5. Etiquetas de Texto Flotantes (Custom Labels)
-            if(sc.customLabels) {
-                sc.customLabels.forEach(lbl => {
+            // 5. Etiquetas de Texto Flotantes (Globales o del Hotspot actual)
+            if(labelsToRender) {
+                labelsToRender.forEach(lbl => {
                     const el = document.createElement('div'); el.className = 'marker-container custom-label-container cursor-pointer interactive';
                     el.innerHTML = `<div class="custom-label" style="background-color: ${lbl.bgColor}; color: ${lbl.color}; font-size: ${lbl.size}px;">${escapeHTML(lbl.content)}</div>`;
                     
@@ -1123,7 +1180,8 @@
         });
 
         renderer.domElement.addEventListener('pointermove', e => {
-            if(inSubScene) return; 
+            if(inSubScene && !isEditingVerticesLine && !isDrawingLine && !isDrawingLabel && !movingLabelId) return; // Permitir eventos en subescenas para herramientas permitidas
+            
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
@@ -1138,45 +1196,49 @@
                 return; 
             }
 
-            // Tooltip Lotes
-            const tt = $('tooltip'); tt.style.left = e.clientX + 'px'; tt.style.top = e.clientY + 'px';
-            const hit = raycaster.intersectObjects(meshes.polygons)[0];
-            
-            if (!hit) {
-                if (hoveredMesh) { 
-                    const l = hoveredMesh.userData.lot; 
-                    hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0);
+            // Tooltip Lotes (Si no estamos en subescena)
+            if(!inSubScene) {
+                const tt = $('tooltip'); tt.style.left = e.clientX + 'px'; tt.style.top = e.clientY + 'px';
+                const hit = raycaster.intersectObjects(meshes.polygons)[0];
+                
+                if (!hit) {
+                    if (hoveredMesh) { 
+                        const l = hoveredMesh.userData.lot; 
+                        hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0);
+                    }
+                    hoveredMesh = null; tt.style.opacity = '0'; tt.style.pointerEvents = 'none';
+                    renderer.domElement.style.cursor = (isDrawing||isDrawingHotspot||movingHotspotId||isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab'; return;
                 }
-                hoveredMesh = null; tt.style.opacity = '0'; tt.style.pointerEvents = 'none';
-                renderer.domElement.style.cursor = (isDrawing||isDrawingHotspot||movingHotspotId||isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab'; return;
-            }
-            
-            renderer.domElement.style.cursor = 'pointer'; const mesh = hit.object;
-            if (hoveredMesh !== mesh && !isEditingVertices && !isEditingVerticesLine) {
-                if (hoveredMesh) {
-                    const l = hoveredMesh.userData.lot;
-                    hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0); 
-                }
-                hoveredMesh = mesh; hoveredMesh.material.opacity = 0.8; const lot = mesh.userData.lot;
                 
-                $('ttName').textContent = lot.name; let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
-                if(p) { $('ttPrice').textContent = p; $('ttPrice').classList.remove('hidden'); } else { $('ttPrice').classList.add('hidden'); }
-                
-                const isSold = lot.status === 'sold'; const isProcess = lot.status === 'proceso';
-                $('ttStatus').textContent = isSold ? 'Vendido' : (isProcess ? 'En proceso de venta' : 'Disponible');
-                $('ttStatus').className = `text-[10px] md:text-[11px] uppercase tracking-wider font-bold ${isSold ? 'text-red-400' : (isProcess?'text-blue-400':'text-green-400')}`;
-                
-                if(lot.area) { $('ttAreaText').textContent = lot.area; $('ttArea').classList.remove('hidden'); } else { $('ttArea').classList.add('hidden'); }
-                if(lot.desc) { $('ttDesc').textContent = lot.desc; $('ttDesc').classList.remove('hidden'); } else { $('ttDesc').classList.add('hidden'); }
+                renderer.domElement.style.cursor = 'pointer'; const mesh = hit.object;
+                if (hoveredMesh !== mesh && !isEditingVertices && !isEditingVerticesLine) {
+                    if (hoveredMesh) {
+                        const l = hoveredMesh.userData.lot;
+                        hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0); 
+                    }
+                    hoveredMesh = mesh; hoveredMesh.material.opacity = 0.8; const lot = mesh.userData.lot;
+                    
+                    $('ttName').textContent = lot.name; let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
+                    if(p) { $('ttPrice').textContent = p; $('ttPrice').classList.remove('hidden'); } else { $('ttPrice').classList.add('hidden'); }
+                    
+                    const isSold = lot.status === 'sold'; const isProcess = lot.status === 'proceso';
+                    $('ttStatus').textContent = isSold ? 'Vendido' : (isProcess ? 'En proceso de venta' : 'Disponible');
+                    $('ttStatus').className = `text-[10px] md:text-[11px] uppercase tracking-wider font-bold ${isSold ? 'text-red-400' : (isProcess?'text-blue-400':'text-green-400')}`;
+                    
+                    if(lot.area) { $('ttAreaText').textContent = lot.area; $('ttArea').classList.remove('hidden'); } else { $('ttArea').classList.add('hidden'); }
+                    if(lot.desc) { $('ttDesc').textContent = lot.desc; $('ttDesc').classList.remove('hidden'); } else { $('ttDesc').classList.add('hidden'); }
 
-                if (lot.urls && lot.urls.length > 0) { 
-                    $('ttImage').src = lot.urls[0]; $('ttImage').classList.remove('hidden'); 
-                    $('ttClickHint').textContent = lot.urls.length > 1 ? `Galería (${lot.urls.length} fotos)` : 'Clic para ampliar'; 
-                    $('ttClickHint').classList.remove('hidden'); tt.style.pointerEvents = 'auto'; 
-                    $('ttImage').onclick = () => openFullGallery(lot.urls);
-                } else { $('ttImage').classList.add('hidden'); $('ttClickHint').classList.add('hidden'); tt.style.pointerEvents = 'none'; }
-                
-                tt.style.opacity = '1';
+                    if (lot.urls && lot.urls.length > 0) { 
+                        $('ttImage').src = lot.urls[0]; $('ttImage').classList.remove('hidden'); 
+                        $('ttClickHint').textContent = lot.urls.length > 1 ? `Galería (${lot.urls.length} fotos)` : 'Clic para ampliar'; 
+                        $('ttClickHint').classList.remove('hidden'); tt.style.pointerEvents = 'auto'; 
+                        $('ttImage').onclick = () => openFullGallery(lot.urls);
+                    } else { $('ttImage').classList.add('hidden'); $('ttClickHint').classList.add('hidden'); tt.style.pointerEvents = 'none'; }
+                    
+                    tt.style.opacity = '1';
+                }
+            } else {
+                renderer.domElement.style.cursor = (isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab';
             }
         });
 
@@ -1192,48 +1254,39 @@
             
             const sc = getCurrentScene();
             
-            // 1. Portales 360 (Hotspots)
-            if (isDrawingHotspot || movingHotspotId) {
+            // 1. Portales 360 (Hotspots) - Solo funciona si NO estamos en subescena
+            if ((isDrawingHotspot || movingHotspotId) && !inSubScene) {
                 if(!sc.hotspots) sc.hotspots = [];
                 if (movingHotspotId) { const hs = sc.hotspots.find(h => h.id === movingHotspotId); if(hs) hs.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; movingHotspotId = null; showToast("Portal reubicado", "success"); } 
                 else { pendingHotspotData.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; sc.hotspots.push(pendingHotspotData); showToast("Portal creado", "success"); }
                 await saveStateToFirebase(); cancelHotspot(); rebuildLots(); renderHotspotList(); return;
             }
             
-            // 2. Custom Labels (Etiquetas)
+            // 2. Custom Labels (Etiquetas) - Funcionan tanto principal como Sub-escena
             if (isDrawingLabel || movingLabelId) {
-                if(!sc.customLabels) sc.customLabels = [];
-                if (movingLabelId) { const lbl = sc.customLabels.find(l => l.id === movingLabelId); if(lbl) lbl.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; movingLabelId = null; showToast("Etiqueta reubicada", "success"); } 
-                else { pendingLabelData.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; sc.customLabels.push(pendingLabelData); showToast("Etiqueta creada", "success"); }
+                const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+                if(!target.customLabels) target.customLabels = [];
+                
+                if (movingLabelId) { const lbl = target.customLabels.find(l => l.id === movingLabelId); if(lbl) lbl.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; movingLabelId = null; showToast("Etiqueta reubicada", "success"); } 
+                else { pendingLabelData.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; target.customLabels.push(pendingLabelData); showToast("Etiqueta creada", "success"); }
                 await saveStateToFirebase(); cancelLabelPlacement(); rebuildLots(); renderLabelList(); return;
             }
 
-            // 3. Lineas Libres
+            // 3. Lineas Libres - Funcionan en ambas
             if (isDrawingLine) {
                 activeLinePoints.push(hit.point.clone());
                 drawLineFeedback();
                 return;
             }
 
-            // 4. Lotes
-            if (isDrawing) {
+            // 4. Lotes - Solo en principal
+            if (isDrawing && !inSubScene) {
                 drawingPoints.push(hit.point.clone()); drawPolygonFeedback();
                 if (drawingPoints.length >= 3) { $('lotForm').classList.remove('hidden'); $('lotForm').scrollIntoView({ behavior: 'smooth' }); }
                 return;
             }
         });
 
-
-        function loadDestSceneOptions(selectElementId) {
-            const select = $(selectElementId); select.innerHTML = '';
-            state.scenes.forEach(sc => {
-                if(sc.id !== state.currentSceneId) {
-                    const opt = document.createElement('option');
-                    opt.value = sc.id; opt.textContent = sc.name;
-                    select.appendChild(opt);
-                }
-            });
-        }
 
         function cancelHotspot() { 
             isDrawingHotspot = false; movingHotspotId = null; pendingHotspotData = null; 
@@ -1245,16 +1298,13 @@
             cancelDrawing(); cancelLineDraw(); cancelLabelPlacement(); 
             
             $('hsTitle').value = ''; $('hsDesc').value = '';
+            $('hsColor').value = '#f97316';
             if($('hsIconFile')) $('hsIconFile').value = '';
             if($('hsIconUrl')) $('hsIconUrl').value = '';
-            if($('hsTargetFile')) $('hsTargetFile').value = '';
-            if($('hsTargetUrl')) $('hsTargetUrl').value = '';
+            if($('hsGalleryFiles')) $('hsGalleryFiles').value = '';
+            if($('hs360File')) $('hs360File').value = '';
+            if($('hs360Url')) $('hs360Url').value = '';
             if($('hsRot360')) { $('hsRot360').value = 0; $('valHsRot360').innerText = '0°'; }
-            if($('hsActionType')) {
-                $('hsActionType').value = 'text';
-                $('hsTargetGroup').style.display = 'none';
-                $('hsDescGroup').style.display = 'block';
-            }
             
             $('hotspotForm').classList.remove('hidden'); $('startHotspot').classList.add('hidden'); 
         };
@@ -1264,21 +1314,31 @@
                 $('loading').classList.remove('hidden');
                 const title = $('hsTitle').value.trim() || 'Punto Info'; 
                 const desc = $('hsDesc').value.trim();
-                const actionType = $('hsActionType').value;
+                const color = $('hsColor').value;
                 
                 let icon = $('hsIconUrl').value.trim();
                 if($('hsIconFile').files[0]) icon = await uploadImageToImgBB($('hsIconFile').files[0]);
 
-                let targetUrl = $('hsTargetUrl').value.trim();
-                if($('hsTargetFile').files[0]) targetUrl = await uploadImageToImgBB($('hsTargetFile').files[0]);
+                let gallery = [];
+                if($('hsGalleryFiles').files.length > 0) {
+                    gallery = await Promise.all(Array.from($('hsGalleryFiles').files).map(f => uploadImageToImgBB(f)));
+                }
+
+                let targetUrl360 = $('hs360Url').value.trim();
+                if($('hs360File').files[0]) targetUrl360 = await uploadImageToImgBB($('hs360File').files[0]);
 
                 const rot360 = parseInt($('hsRot360').value) || 0;
 
-                pendingHotspotData = { id: 'hs-' + Date.now(), title, desc, icon, actionType, targetUrl, rot360 };
+                pendingHotspotData = { 
+                    id: 'hs-' + Date.now(), title, desc, color, icon, 
+                    gallery, targetUrl360, rot360,
+                    lines: [], customLabels: [] // Iniciamos los arrays para poder añadirle lineas y textos internos
+                };
+                
                 $('hotspotForm').classList.add('hidden'); $('hotspotMenu').classList.remove('hidden'); 
                 isDrawingHotspot = true; renderer.domElement.style.cursor = 'crosshair';
             } catch(e) {
-                showToast("Error procesando imagen", "error");
+                showToast("Error procesando archivos del punto", "error");
             } finally {
                 $('loading').classList.add('hidden');
             }
@@ -1290,31 +1350,22 @@
         function renderHotspotList() {
             const c = $('hotspotList'); c.innerHTML = ''; const sc = getCurrentScene(); if (!sc.hotspots || !sc.hotspots.length) return;
             sc.hotspots.forEach(hs => {
+                const hsColor = hs.color || '#f97316';
                 const div = document.createElement('div'); div.className = 'flex items-center justify-between p-2 rounded-xl border border-white/5 bg-black/50';
-                div.innerHTML = `<div class="flex items-center gap-3 overflow-hidden"><div class="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-500/50"><i class="fas fa-bullseye text-orange-400 text-[10px]"></i></div><div class="truncate"><div class="text-[11px] font-bold text-white truncate">${escapeHTML(hs.title)}</div></div></div><div class="flex gap-1 shrink-0"><button class="edit-btn text-orange-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-edit"></i></button><button class="move-btn text-blue-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-arrows-alt"></i></button><button class="del-btn text-red-500 p-1 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button></div>`;
+                div.innerHTML = `<div class="flex items-center gap-3 overflow-hidden"><div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border" style="background-color: ${hsColor}33; border-color: ${hsColor}aa;"><i class="fas fa-bullseye text-[10px]" style="color:${hsColor};"></i></div><div class="truncate"><div class="text-[11px] font-bold text-white truncate">${escapeHTML(hs.title)}</div></div></div><div class="flex gap-1 shrink-0"><button class="edit-btn text-orange-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-edit"></i></button><button class="move-btn text-blue-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-arrows-alt"></i></button><button class="del-btn text-red-500 p-1 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button></div>`;
                 div.querySelector('.del-btn').onclick = () => openDeleteModal('hotspot', hs.id, hs.title);
                 div.querySelector('.edit-btn').onclick = () => { 
                     editingHsId = hs.id; 
                     $('editHsTitle').value = hs.title || ''; 
                     $('editHsDesc').value = hs.desc || '';
+                    $('editHsColor').value = hs.color || '#f97316';
                     $('editHsIconFile').value = '';
                     $('editHsIconUrl').value = hs.icon || '';
-                    $('editHsActionType').value = hs.actionType || 'text';
-                    $('editHsTargetFile').value = '';
-                    $('editHsTargetUrl').value = hs.targetUrl || '';
+                    $('editHsGalleryFiles').value = '';
+                    $('editHs360File').value = '';
+                    $('editHs360Url').value = hs.targetUrl360 || '';
                     $('editHsRot360').value = hs.rot360 || 0;
                     $('valEditHsRot360').innerText = (hs.rot360 || 0) + '°';
-                    
-                    const is360 = $('editHsActionType').value === '360';
-                    document.getElementById('editHsTargetGroup').style.display = ($('editHsActionType').value === 'text') ? 'none' : 'block';
-                    document.getElementById('editHsDescGroup').style.display = ($('editHsActionType').value === 'text') ? 'block' : 'none';
-                    document.getElementById('editHsRotGroup').style.display = is360 ? 'block' : 'none';
-
-                    $('editHsActionType').onchange = function() {
-                        document.getElementById('editHsTargetGroup').style.display = this.value === 'text' ? 'none' : 'block'; 
-                        document.getElementById('editHsDescGroup').style.display = this.value === 'text' ? 'block' : 'none';
-                        document.getElementById('editHsRotGroup').style.display = this.value === '360' ? 'block' : 'none';
-                    };
                     
                     $('editHotspotModal').classList.add('active'); 
                 };
@@ -1329,23 +1380,24 @@
                 $('loading').classList.remove('hidden');
                 hs.title = $('editHsTitle').value.trim(); 
                 hs.desc = $('editHsDesc').value.trim();
-                hs.actionType = $('editHsActionType').value;
+                hs.color = $('editHsColor').value;
                 hs.rot360 = parseInt($('editHsRot360').value) || 0;
                 
-                let icon = $('editHsIconUrl').value.trim();
-                if($('editHsIconFile').files[0]) icon = await uploadImageToImgBB($('editHsIconFile').files[0]);
-                if(icon !== undefined && icon !== '') hs.icon = icon;
+                if($('editHsIconFile').files[0]) hs.icon = await uploadImageToImgBB($('editHsIconFile').files[0]);
+                else if($('editHsIconUrl').value.trim()) hs.icon = $('editHsIconUrl').value.trim();
                 
-                let targetUrl = $('editHsTargetUrl').value.trim();
-                if($('editHsTargetFile').files[0]) targetUrl = await uploadImageToImgBB($('editHsTargetFile').files[0]);
-                if(targetUrl !== undefined && targetUrl !== '') hs.targetUrl = targetUrl;
+                if($('editHsGalleryFiles').files.length > 0) {
+                    const newUrls = await Promise.all(Array.from($('editHsGalleryFiles').files).map(f => uploadImageToImgBB(f)));
+                    if(!hs.gallery) hs.gallery = [];
+                    hs.gallery.push(...newUrls);
+                }
+
+                if($('editHs360File').files[0]) hs.targetUrl360 = await uploadImageToImgBB($('editHs360File').files[0]);
+                else if($('editHs360Url').value.trim()) hs.targetUrl360 = $('editHs360Url').value.trim();
 
                 await saveStateToFirebase(); $('editHotspotModal').classList.remove('active'); rebuildLots(); renderHotspotList(); 
-            } catch(e) {
-                showToast("Error guardando el punto", "error");
-            } finally {
-                $('loading').classList.add('hidden');
-            }
+            } catch(e) { showToast("Error guardando el punto", "error"); } 
+            finally { $('loading').classList.add('hidden'); }
         };
 
         // Subrutina para viajar a otra foto 360 usando un Hotspot
@@ -1356,7 +1408,14 @@
             $('mainSceneTitle').textContent = title || "Vista Detalle"; 
             $('loading').classList.remove('hidden');
             
-            clear3D(); // Oculta todos los lotes de la vista actual
+            // Ocultar paneles innecesarios
+            if($('adminSectionScenes')) {
+                $('adminSectionScenes').style.display = 'none';
+                $('adminSectionLots').style.display = 'none';
+                $('adminSectionHotspots').style.display = 'none';
+            }
+
+            clear3D(); // Oculta todos los lotes de la vista principal
             
             texLoader.load(url, t => {
                 applyHighQualityTexture(t);
@@ -1370,6 +1429,8 @@
                 }
 
                 $('loading').classList.add('hidden'); 
+                rebuildLots(); // Renderizará las líneas/textos del hotspot actual
+                renderAllUI();
             }, undefined, () => { 
                 showToast("Error cargando el archivo 360", "error");
                 exitHotspot360();
@@ -1447,15 +1508,23 @@
             const name = $('lineName').value.trim() || 'Línea';
             try {
                 $('loading').classList.remove('hidden');
-                const sc = getCurrentScene(); if(!sc.lines) sc.lines = [];
-                sc.lines.push({ id: 'line-' + Date.now(), name, color: currentLineColor, thickness: currentLineThickness, points: activeLinePoints.map(p => ({x: p.x, y: p.y, z: p.z})) });
+                
+                const sc = getCurrentScene(); 
+                const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+                if(!target.lines) target.lines = [];
+                target.lines.push({ id: 'line-' + Date.now(), name, color: currentLineColor, thickness: currentLineThickness, points: activeLinePoints.map(p => ({x: p.x, y: p.y, z: p.z})) });
+                
                 await saveStateToFirebase(); cancelLineDraw(); showToast("Línea guardada", "success"); rebuildLots(); renderLineList();
             } catch(e) { showToast("Error", "error"); } finally { $('loading').classList.add('hidden'); }
         };
 
         function renderLineList() {
-            const c = $('lineList'); c.innerHTML = ''; const sc = getCurrentScene(); if (!sc.lines || !sc.lines.length) return;
-            sc.lines.forEach(ln => {
+            const c = $('lineList'); c.innerHTML = ''; 
+            const sc = getCurrentScene(); 
+            const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+            if (!target || !target.lines || !target.lines.length) return;
+            
+            target.lines.forEach(ln => {
                 const div = document.createElement('div'); div.className = 'flex items-center justify-between p-2 rounded-xl border border-white/5 bg-black/50';
                 div.innerHTML = `<div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:${ln.color}"></div><div class="text-[11px] font-bold text-white truncate flex-1">${escapeHTML(ln.name)}</div></div><div class="flex gap-1"><button class="edit-btn text-pink-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-edit"></i></button><button class="del-btn text-red-500 p-1 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button></div>`;
                 div.querySelector('.del-btn').onclick = () => openDeleteModal('line', ln.id, ln.name);
@@ -1465,7 +1534,10 @@
         }
 
         $('saveEditLnBtn').onclick = async () => {
-            const sc = getCurrentScene(); const ln = sc.lines.find(l => l.id === editingLineId); if(!ln) return;
+            const sc = getCurrentScene(); 
+            const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+            const ln = target.lines.find(l => l.id === editingLineId); if(!ln) return;
+            
             ln.name = $('editLnName').value.trim(); ln.color = $('editLnColor').value; ln.thickness = parseInt($('editLnThickness').value);
             await saveStateToFirebase(); $('editLineModal').classList.remove('active'); rebuildLots(); renderLineList();
         };
@@ -1476,7 +1548,9 @@
         function startVertexEditingLine(lineId) {
             isEditingVerticesLine = true; $('vertexEditUI').classList.remove('hidden');
             $('vertexEditTitle').innerHTML = '<i class="fas fa-hand-pointer mr-1"></i> Editando Vértices de Línea';
-            lineBeingEdited = state.scenes.find(s => s.id === state.currentSceneId).lines.find(l => l.id === lineId);
+            
+            const target = inSubScene ? state.scenes.find(s => s.id === state.currentSceneId).hotspots.find(h => h.id === currentSubSceneHotspotId) : state.scenes.find(s => s.id === state.currentSceneId);
+            lineBeingEdited = target.lines.find(l => l.id === lineId);
             backupPoints = JSON.parse(JSON.stringify(lineBeingEdited.points)); 
 
             meshes.lines3D.forEach(m => { m.visible = false; }); // Ocultar temporalmente
@@ -1522,8 +1596,12 @@
         $('cancelLabel').onclick = cancelLabelPlacement; $('cancelLabelPlacement').onclick = cancelLabelPlacement;
 
         function renderLabelList() {
-            const c = $('labelList'); c.innerHTML = ''; const sc = getCurrentScene(); if (!sc.customLabels || !sc.customLabels.length) return;
-            sc.customLabels.forEach(lbl => {
+            const c = $('labelList'); c.innerHTML = ''; 
+            const sc = getCurrentScene();
+            const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+            if (!target || !target.customLabels || !target.customLabels.length) return;
+            
+            target.customLabels.forEach(lbl => {
                 const div = document.createElement('div'); div.className = 'flex items-center justify-between p-2 rounded-xl border border-white/5 bg-black/50';
                 div.innerHTML = `<div class="text-[11px] font-bold truncate flex-1" style="color: ${lbl.color}; background: ${lbl.bgColor}; padding: 2px 6px; border-radius: 4px;">${escapeHTML(lbl.content)}</div><div class="flex gap-1 ml-2"><button class="edit-btn text-cyan-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-edit"></i></button><button class="move-btn text-blue-400 p-1 hover:bg-white/10 rounded"><i class="fas fa-arrows-alt"></i></button><button class="del-btn text-red-500 p-1 hover:bg-white/10 rounded"><i class="fas fa-trash"></i></button></div>`;
                 div.querySelector('.del-btn').onclick = () => openDeleteModal('label', lbl.id, lbl.content);
@@ -1538,7 +1616,10 @@
         }
 
         $('saveEditLblBtn').onclick = async () => {
-            const sc = getCurrentScene(); const lbl = sc.customLabels.find(l => l.id === editingLabelId); if(!lbl) return;
+            const sc = getCurrentScene(); 
+            const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+            const lbl = target.customLabels.find(l => l.id === editingLabelId); if(!lbl) return;
+            
             lbl.content = $('editLblContent').value.trim() || 'Texto'; lbl.color = $('editLblColor').value; lbl.bgColor = $('editLblBg').value; lbl.size = parseInt($('editLblSize').value);
             await saveStateToFirebase(); $('editLabelModal').classList.remove('active'); rebuildLots(); renderLabelList();
         };
@@ -1808,8 +1889,14 @@
             if (deleteType === 'scene') { state.scenes = state.scenes.filter(s => s.id !== deleteId); if(state.currentSceneId === deleteId) state.currentSceneId = state.scenes[0].id; } 
             else if (deleteType === 'lot') { sc.lots = sc.lots.filter(l => l.id !== deleteId); } 
             else if (deleteType === 'hotspot') { sc.hotspots = sc.hotspots.filter(h => h.id !== deleteId); } 
-            else if (deleteType === 'line') { sc.lines = sc.lines.filter(t => t.id !== deleteId); } 
-            else if (deleteType === 'label') { sc.customLabels = sc.customLabels.filter(t => t.id !== deleteId); } 
+            else if (deleteType === 'line') { 
+                const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+                target.lines = target.lines.filter(t => t.id !== deleteId); 
+            } 
+            else if (deleteType === 'label') { 
+                const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
+                target.customLabels = target.customLabels.filter(t => t.id !== deleteId); 
+            } 
             saveStateToFirebase(); load360Scene(state.currentSceneId); $('deleteModal').classList.remove('active'); 
         };
 
