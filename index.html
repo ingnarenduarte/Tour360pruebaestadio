@@ -35,7 +35,7 @@
         /* Animaciones Puntos Interactivos */
         .hotspot-icon { font-size: 32px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); transition: transform 0.2s; }
         .hotspot-container:hover .hotspot-icon { transform: scale(1.15) translateY(-5px); }
-        .hotspot-pulse { position: absolute; width: 30px; height: 30px; border-radius: 50%; z-index: -1; animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .hotspot-pulse { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: rgba(249, 115, 22, 0.5); z-index: -1; animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
         @keyframes ping-slow { 75%, 100% { transform: scale(2); opacity: 0; } }
         @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
@@ -82,10 +82,17 @@
     <div id="canvas"></div>
     <div id="labels" class="fixed inset-0 z-10 pointer-events-none overflow-hidden"></div>
     
-    <!-- Brújula Dinámica -->
-    <div id="compass" class="fixed top-24 right-4 md:right-6 w-12 h-12 md:w-14 md:h-14 glass rounded-full flex flex-col items-center justify-center z-20 shadow-2xl pointer-events-none border border-orange-500/40 bg-black/60">
-        <span class="text-[9px] md:text-[10px] font-bold text-orange-500 mb-0.5 leading-none">N</span>
-        <i id="compassNeedle" class="fas fa-location-arrow text-white text-lg md:text-xl transform -rotate-45 transition-transform duration-75 origin-center"></i>
+    <!-- Brújula Mejorada Dinámica -->
+    <div id="compass" class="fixed top-24 right-4 md:right-6 w-14 h-14 md:w-16 md:h-16 glass rounded-full flex items-center justify-center z-20 shadow-[0_0_20px_rgba(0,0,0,0.8)] pointer-events-none border border-white/20 bg-gradient-to-br from-slate-900 to-black">
+        <div class="absolute inset-1.5 border-2 border-dashed border-white/20 rounded-full"></div>
+        <div id="compassNeedle" class="relative w-full h-full transition-transform duration-100 ease-out origin-center">
+            <!-- Punta Norte (Roja) -->
+            <div class="absolute top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[24px] border-l-transparent border-r-transparent border-b-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)] z-10"></div>
+            <!-- Punta Sur (Blanca) -->
+            <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[24px] border-l-transparent border-r-transparent border-t-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)] z-0"></div>
+        </div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gray-300 rounded-full shadow-lg z-20 border border-gray-400"></div>
+        <span class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1.5 text-[10px] md:text-[11px] font-black text-red-500 drop-shadow-md bg-black/60 px-1 rounded-sm border border-red-500/30">N</span>
     </div>
 
     <!-- Controles Flotantes para Edición (Vértices o Líneas) -->
@@ -101,8 +108,8 @@
     </div>
 
     <div id="btnBackToScene" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-50 interactive">
-        <button onclick="exitHotspot360()" class="glass px-5 md:px-6 py-2 md:py-3 rounded-full text-white font-bold text-xs md:text-sm border-blue-500/50 hover:bg-blue-600/50 transition-colors shadow-2xl flex items-center gap-2">
-            <i class="fas fa-arrow-left"></i> Volver a la Escena Principal
+        <button onclick="exitHotspot360()" class="glass px-5 md:px-6 py-2 md:py-3 rounded-full text-white font-bold text-xs md:text-sm border-orange-500/50 hover:bg-orange-600/50 transition-colors shadow-2xl flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Volver a la Escena
         </button>
     </div>
     
@@ -145,22 +152,15 @@
 
     <!-- Info Hotspot Modal -->
     <div id="infoHotspotModal" class="modal-overlay interactive" onclick="if(event.target === this) this.classList.remove('active')">
-        <div class="glass rounded-2xl p-6 w-[95%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90 text-center flex flex-col max-h-[90vh]">
+        <div class="glass rounded-2xl p-6 w-[95%] max-w-sm border border-orange-500/30 shadow-2xl bg-black/90 text-center">
+            <div id="hsModalIconContainer" class="w-16 h-16 mx-auto rounded-full bg-orange-900/50 border border-orange-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.3)] mb-4 overflow-hidden">
+                <i id="hsModalIcon" class="fas fa-info-circle text-orange-400 text-2xl"></i>
+            </div>
             <h2 id="hsModalTitle" class="text-xl font-bold text-white leading-tight mb-2"></h2>
-            
-            <div class="overflow-y-auto scroll px-2 bg-black/40 rounded-lg p-3 border border-white/5 text-left flex-1 mb-4">
+            <div class="max-h-[50vh] overflow-y-auto scroll px-2 bg-black/40 rounded-lg p-3 border border-white/5 text-left">
                 <p id="hsModalDesc" class="text-sm text-gray-300 whitespace-pre-wrap"></p>
-                
-                <div id="hsModalGalleryWrapper" class="mt-3 hidden border-t border-white/10 pt-3">
-                    <p class="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-wider">Galería de Imágenes</p>
-                    <div id="hsModalGallery" class="flex gap-2 overflow-x-auto scroll snap-x pb-2"></div>
-                </div>
             </div>
-            
-            <div class="flex gap-2 shrink-0">
-                <button id="hsModalBtn360" class="hidden flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors"><i class="fas fa-vr-cardboard mr-2"></i>Entrar 360°</button>
-                <button class="flex-1 bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors" onclick="document.getElementById('infoHotspotModal').classList.remove('active')">Cerrar</button>
-            </div>
+            <button class="mt-5 w-full bg-orange-600 hover:bg-orange-500 text-white rounded-xl py-3 text-sm font-bold shadow-lg transition-colors" onclick="document.getElementById('infoHotspotModal').classList.remove('active')">Cerrar</button>
         </div>
     </div>
 
@@ -168,7 +168,7 @@
         
         <!-- BARRA LATERAL PÚBLICA (Listado de Lotes) -->
         <aside id="publicSidebar" class="sidebar glass z-50 border-r border-orange-500/30 shadow-[10px_0_30px_rgba(0,0,0,0.5)] bg-slate-900/95">
-            <div class="p-4 md:p-5 border-b border-orange-500/30 flex items-center justify-between bg-black/40 backdrop-blur-md">
+            <div class="p-4 md:p-5 border-b border-orange-500/30 flex items-center justify-between bg-black/40 backdrop-blur-md shrink-0">
                 <div>
                     <div class="text-[10px] md:text-[11px] uppercase tracking-[.2em] text-orange-300/80 mb-1 font-bold">Catálogo</div>
                     <h2 class="text-lg md:text-xl font-black text-white">Listado de Lotes</h2>
@@ -176,7 +176,7 @@
                 <button id="closePublicSidebar" class="text-gray-400 hover:text-orange-400 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center transition-colors shadow-inner" title="Ocultar Panel"><i class="fas fa-times"></i></button>
             </div>
             
-            <div class="p-4 bg-black/60 border-b border-white/10 space-y-3 shadow-inner">
+            <div class="p-4 bg-black/60 border-b border-white/10 space-y-3 shadow-inner shrink-0">
                 <!-- Filtros -->
                 <div class="grid grid-cols-2 gap-2">
                     <div>
@@ -215,6 +215,19 @@
             <div class="scroll flex-1 p-3 md:p-4 space-y-3" id="publicLotList">
                 <!-- Tarjetas de Lotes dinámicas -->
             </div>
+
+            <!-- Botón Modo Edición Movido al Final del Menú -->
+            <div class="p-4 border-t border-orange-500/30 bg-black/60 mt-auto shrink-0">
+                <div class="glass rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer shadow-lg bg-black/80 border border-white/10 hover:bg-black transition-colors w-full" id="toggleAdminBtn">
+                    <div class="flex items-center gap-2">
+                        <i id="modeIcon" class="fas fa-eye text-orange-400"></i>
+                        <span id="modeText" class="text-xs font-semibold text-white">Modo Público</span>
+                    </div>
+                    <div class="w-10 h-5 rounded-full bg-gray-700 relative shadow-inner border border-gray-600">
+                        <span id="adminKnob" class="absolute top-[1px] left-[1px] md:top-0.5 md:left-0.5 w-4 h-4 bg-orange-500 rounded-full transition-all"></span>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <!-- BARRA LATERAL ADMIN -->
@@ -242,7 +255,7 @@
                 <hr class="border-orange-500/20">
 
                 <!-- 1. Escenas -->
-                <section id="adminSectionScenes">
+                <section>
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-orange-400 font-bold"><i class="fas fa-globe mr-2"></i>Escenas 360°</h3>
                         <button id="btnNewSceneForm" class="bg-orange-600/20 text-orange-500 hover:bg-orange-600 hover:text-white transition-colors px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border border-orange-500/30"><i class="fas fa-plus mr-1"></i>Añadir</button>
@@ -260,11 +273,11 @@
                         </div>
                     </div>
                     <div id="sceneListAdmin" class="space-y-2 md:space-y-3"></div>
-                    <hr class="border-orange-500/20 mt-5">
                 </section>
+                <hr class="border-orange-500/20">
 
                 <!-- 2. Lotes / Áreas -->
-                <section id="adminSectionLots">
+                <section>
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-green-400 font-bold"><i class="fas fa-draw-polygon mr-2"></i>Áreas / Lotes</h3>
                         <button id="startDraw" class="bg-green-600 hover:bg-green-500 text-white transition-colors px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg flex items-center uppercase"><i class="fas fa-plus mr-1"></i> Trazar</button>
@@ -306,11 +319,11 @@
                         </div>
                     </div>
                     <div id="lotList" class="space-y-2"></div>
-                    <hr class="border-orange-500/20 mt-5">
                 </section>
+                <hr class="border-orange-500/20">
 
                 <!-- 3. Puntos de Información -->
-                <section id="adminSectionHotspots">
+                <section>
                     <div class="flex items-center justify-between mb-2 md:mb-3">
                         <h3 class="text-xs uppercase tracking-wider text-orange-400 font-bold"><i class="fas fa-bullseye mr-2"></i>Puntos/Hotspots</h3>
                         <button id="startHotspot" class="bg-orange-900/50 text-orange-400 hover:bg-orange-800 hover:text-white transition-colors px-3 py-1 rounded-md text-[10px] font-bold uppercase border border-orange-700/50">+ CREAR</button>
@@ -321,45 +334,40 @@
                     </div>
                     <div id="hotspotForm" class="hidden bg-black/60 border border-orange-500/40 rounded-xl p-3 mb-3 relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-amber-500"></div>
+                        <label class="text-[10px] text-gray-400 block mb-1 mt-1">Título</label>
+                        <input id="hsTitle" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-2" placeholder="Ej. Zona Verde">
                         
-                        <div class="grid grid-cols-[1fr_auto] gap-2 items-center mb-2 mt-1">
-                            <div>
-                                <label class="text-[10px] text-gray-400 block mb-1">Título</label>
-                                <input id="hsTitle" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white" placeholder="Ej. Zona Verde">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-gray-400 block mb-1">Color</label>
-                                <input type="color" id="hsColor" value="#f97316" class="w-10 h-[30px] bg-gray-900 border border-gray-700 rounded-lg cursor-pointer">
-                            </div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Tipo de Acción</label>
+                        <select id="hsActionType" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white mb-2 outline-none focus:border-orange-500" onchange="document.getElementById('hsTargetGroup').style.display = this.value === 'text' ? 'none' : 'block'; document.getElementById('hsDescGroup').style.display = this.value === 'text' ? 'block' : 'none';">
+                            <option value="text">Mostrar Texto de Información</option>
+                            <option value="image">Abrir Imagen (Normal)</option>
+                            <option value="360">Entrar a Escena 360</option>
+                        </select>
+
+                        <div id="hsDescGroup">
+                            <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
+                            <textarea id="hsDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-2 resize-none" placeholder="Detalles del punto..."></textarea>
                         </div>
 
-                        <label class="text-[10px] text-gray-400 block mb-1">Descripción</label>
-                        <textarea id="hsDesc" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-orange-500 text-white mb-3 resize-none" placeholder="Detalles del punto..."></textarea>
-                        
-                        <div class="bg-pink-900/10 p-2 rounded-lg border border-pink-500/20 mb-3">
-                            <label class="text-[10px] text-pink-400 block mb-1"><i class="fas fa-image mr-1"></i>Icono del Punto (Opcional)</label>
-                            <input type="file" id="hsIconFile" accept="image/jpeg, image/png, image/svg+xml" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
-                            <input id="hsIconUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-pink-500 text-white" placeholder="O pega URL del icono">
-                        </div>
-
-                        <div class="bg-purple-900/10 p-2 rounded-lg border border-purple-500/20 mb-3">
-                            <label class="text-[10px] text-purple-400 block mb-1"><i class="fas fa-images mr-1"></i>Galería de Imágenes (Opcional)</label>
-                            <input type="file" id="hsGalleryFiles" multiple accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 cursor-pointer">
-                        </div>
-
-                        <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20 mb-2">
-                            <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-vr-cardboard mr-1"></i>Entorno 360° (Opcional)</label>
-                            <input type="file" id="hs360File" accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
-                            <input id="hs360Url" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-blue-500 text-white mb-2" placeholder="O pega URL de la imagen 360">
+                        <div id="hsTargetGroup" style="display:none;" class="bg-blue-900/10 p-2 rounded-lg border border-blue-500/20 mb-2">
+                            <label class="text-[10px] text-blue-400 block mb-1"><i class="fas fa-file-upload mr-1"></i>Archivo Destino (Imagen o 360)</label>
+                            <input type="file" id="hsTargetFile" accept="image/jpeg, image/png" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
+                            <input id="hsTargetUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-blue-500 text-white" placeholder="O pega URL de la imagen">
                             
-                            <!-- SLIDER CALIBRAR NORTE 360 -->
-                            <div class="border-t border-blue-500/20 pt-2">
-                                <label class="text-[10px] text-blue-400 flex justify-between mb-1">
+                            <!-- NUEVO: SLIDER CALIBRAR NORTE 360 (CREAR HOTSPOT 360) -->
+                            <div class="border-t border-purple-500/20 pt-2 mt-2">
+                                <label class="text-[10px] text-purple-400 flex justify-between mb-1">
                                     <span>Calibrar Norte 360°</span>
                                     <span id="valHsRot360">0°</span>
                                 </label>
-                                <input type="range" id="hsRot360" min="-180" max="180" value="0" class="w-full accent-blue-500" oninput="document.getElementById('valHsRot360').innerText = this.value + '°';">
+                                <input type="range" id="hsRot360" min="-180" max="180" value="0" class="w-full accent-purple-500" oninput="document.getElementById('valHsRot360').innerText = this.value + '°';">
                             </div>
+                        </div>
+
+                        <div class="bg-pink-900/10 p-2 rounded-lg border border-pink-500/20 mb-1">
+                            <label class="text-[10px] text-pink-400 block mb-1"><i class="fas fa-image mr-1"></i>Icono del Punto (Opcional)</label>
+                            <input type="file" id="hsIconFile" accept="image/jpeg, image/png, image/svg+xml" class="w-full text-[10px] text-gray-400 mb-1 cursor-pointer">
+                            <input id="hsIconUrl" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-pink-500 text-white" placeholder="O pega URL del icono">
                         </div>
 
                         <div class="flex gap-2 mt-3">
@@ -368,8 +376,8 @@
                         </div>
                     </div>
                     <div id="hotspotList" class="space-y-2"></div>
-                    <hr class="border-orange-500/20 mt-5">
                 </section>
+                <hr class="border-orange-500/20">
 
                 <!-- 4. Líneas Libres 3D -->
                 <section>
@@ -482,11 +490,6 @@
                         <button id="btnToggleDeviceMode" class="hidden glass rounded-full w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-white shadow-lg bg-black/60 border border-white/10 hover:bg-black/80 transition-colors" title="Cambiar Vista">
                             <i class="fas fa-desktop text-sm"></i>
                         </button>
-                        
-                        <div class="glass rounded-full px-3 py-1.5 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 cursor-pointer shadow-lg bg-black/60 border border-white/10 hover:bg-black/80 transition-colors" id="toggleAdminBtn">
-                            <i id="modeIcon" class="fas fa-eye text-orange-400 text-xs md:text-base"></i><span id="modeText" class="hidden md:inline text-xs font-semibold text-white">Modo Público</span>
-                            <div class="w-8 h-4 md:w-10 md:h-5 rounded-full bg-gray-700 relative shadow-inner border border-gray-600"><span id="adminKnob" class="absolute top-[1px] md:top-0.5 left-[1px] md:left-0.5 w-3 h-3 md:w-4 md:h-4 bg-orange-500 rounded-full transition-all"></span></div>
-                        </div>
                     </div>
                     <div id="loading" class="hidden glass rounded-full px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-xs font-bold text-white bg-orange-600/90 border border-orange-400 shadow-xl"><i class="fas fa-circle-notch fa-spin mr-1 md:mr-2"></i> Procesando...</div>
                 </div>
@@ -750,7 +753,6 @@
         const ADMIN_PASSWORD = "Duarte.03";
         const DEFAULT_360 = "https://raw.githubusercontent.com/aframevr/aframe/master/examples/boilerplate/panorama/puydesancy.jpg";
         
-        // --- TUS CLAVES EXACTAS DE FIREBASE ---
         const IMGBB_API_KEY = "326a754565ffcd8139d89f15bd8df6e7";
         const firebaseConfig = {
             apiKey: "AIzaSyDBABBPKFChN5hWvCVWiFA1PfoBiWg3u2I",
@@ -772,28 +774,22 @@
         
         let isAdmin = false; 
         
-        // Polígonos (Lotes)
         let isDrawing = false; let drawingPoints = []; let drawingLine = null; 
         let editingLotId = null; let editStatusSelected = 'available';
 
-        // Puntos/Hotspots (Portales 360)
         let isDrawingHotspot = false; let movingHotspotId = null; let pendingHotspotData = null; let editingHsId = null;
         
-        // Líneas Libres
         let isDrawingLine = false; let activeLinePoints = []; let activeLineMesh = null;
         let currentLineColor = '#ec4899'; let currentLineThickness = 3;
         let editingLineId = null; 
         let isEditingVerticesLine = false; let lineBeingEdited = null;
 
-        // Etiquetas HTML (Flotantes)
         let isDrawingLabel = false; let movingLabelId = null; let pendingLabelData = null; let editingLabelId = null;
 
-        // Vértices Global
         let isEditingVertices = false; let vertexMarkers = []; let draggingMarker = null; let lotBeingEdited = null; let backupPoints = null; let editingPolygonMesh = null;
         
         let isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Vista Móvil/Escritorio Force
         let forcedDesktopMode = false;
         if(isMobileDevice) { $('btnToggleDeviceMode').classList.remove('hidden'); }
 
@@ -832,7 +828,6 @@
         $('filterMinPrice').addEventListener('input', applyCurrencyFormat);
         $('filterMaxPrice').addEventListener('input', applyCurrencyFormat);
 
-        // Disparar filtros en vivo en la lista pública
         $('filterName').addEventListener('input', renderPublicLotList);
         $('filterArea').addEventListener('input', renderPublicLotList);
         $('filterStatus').addEventListener('change', renderPublicLotList);
@@ -867,33 +862,29 @@
         const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000); 
         camera.position.set(0, 0, 0.1);
         
-        // RENDERER AVANZADO: Nitidez y Color Real
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         renderer.outputEncoding = THREE.sRGBEncoding; 
         renderer.setSize(window.innerWidth, window.innerHeight); 
-        renderer.setPixelRatio(window.devicePixelRatio); // Fuerza la resolución nativa al máximo en dispositivos HD/4K
+        renderer.setPixelRatio(window.devicePixelRatio); 
         UI.canvas.appendChild(renderer.domElement);
         
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enablePan = false; controls.enableZoom = false; controls.enableDamping = true; controls.dampingFactor = 0.05;
 
-        // Custom FOV Zoom para PC y Táctil
         renderer.domElement.addEventListener('wheel', (e) => { camera.fov += e.deltaY * 0.05; camera.fov = Math.max(20, Math.min(100, camera.fov)); camera.updateProjectionMatrix(); }, {passive: true});
         let touchStartDist = 0; let initialFov = 0;
         renderer.domElement.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { touchStartDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); initialFov = camera.fov; } }, {passive: true});
         renderer.domElement.addEventListener('touchmove', (e) => { if (e.touches.length === 2) { const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); camera.fov = initialFov + (touchStartDist - dist) * 0.1; camera.fov = Math.max(20, Math.min(100, camera.fov)); camera.updateProjectionMatrix(); } }, {passive: true});
 
-        const sphereGeo = new THREE.SphereGeometry(500, 128, 96); sphereGeo.scale(-1, 1, 1); // Incremento radical en los segmentos para evitar distorsión de pixeles
-        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Blanco Puro
+        const sphereGeo = new THREE.SphereGeometry(500, 128, 96); sphereGeo.scale(-1, 1, 1);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const sphere = new THREE.Mesh(sphereGeo, sphereMat); scene3D.add(sphere);
         
-        // Hacer la esfera accesible globalmente
         window.sphere = sphere;
 
         const texLoader = new THREE.TextureLoader(); texLoader.setCrossOrigin('anonymous');
         const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
         
-        // Arrays de meshes
         const meshes = { polygons: [], labels: [], customLabels: [], lines3D: [] };
 
         async function initData() {
@@ -931,7 +922,6 @@
         function load360Scene(sceneId) {
             inSubScene = false; currentSubSceneHotspotId = null; $('btnBackToScene').classList.add('hidden');
             
-            // Re-mostrar las opciones de creación de Lotes y Hotspots al salir de la subescena
             if($('adminSectionScenes')) {
                 $('adminSectionScenes').style.display = 'block';
                 $('adminSectionLots').style.display = 'block';
@@ -950,7 +940,6 @@
                 applyHighQualityTexture(t);
                 sphereMat.map = t; sphereMat.needsUpdate = true;
                 
-                // Aplicar rotación del norte para Escena Principal
                 if (window.sphere) {
                     window.sphere.rotation.y = (sc.rotation || 0) * (Math.PI / 180);
                 }
@@ -972,11 +961,10 @@
             meshes.polygons = []; meshes.labels = []; meshes.customLabels = []; meshes.lines3D = []; UI.labels.innerHTML = '';
         }
 
-        // Helpers de Color
         function getStatusDefaultColor(status) {
-            if(status === 'sold') return '#ef4444'; // Rojo
-            if(status === 'proceso') return '#3b82f6'; // Azul
-            return '#22c55e'; // Verde
+            if(status === 'sold') return '#ef4444'; 
+            if(status === 'proceso') return '#3b82f6';
+            return '#22c55e';
         }
 
         function lookAtLot(lotId) {
@@ -1014,7 +1002,6 @@
             let linesToRender = sc.lines || [];
             let labelsToRender = sc.customLabels || [];
 
-            // Si estamos en una sub-escena 360, asignamos las colecciones del Hotspot actual
             if (inSubScene) {
                 const hs = sc.hotspots.find(h => h.id === currentSubSceneHotspotId);
                 if(hs) {
@@ -1023,9 +1010,7 @@
                 }
             }
 
-            // Si NO estamos en una subescena, mostramos Lotes, Puntos y Pin de Mapas
             if (!inSubScene) {
-                // 1. Lotes (Polígonos y Etiquetas)
                 if(sc.lots) {
                     sc.lots.forEach(lot => {
                         if (!lot.points || lot.points.length < 3) return;
@@ -1064,7 +1049,6 @@
                     });
                 }
 
-                // 2. Google Maps Pin
                 if(sc.mapsUrl) {
                     const el = document.createElement('div'); el.className = 'marker-container pointer-events-auto cursor-pointer group';
                     el.innerHTML = `<i class="fas fa-map-marker-alt text-blue-500 map-pin"></i><div class="bg-blue-600/90 text-white text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-blue-400">Ver Ubicación</div>`;
@@ -1072,7 +1056,6 @@
                     UI.labels.appendChild(el); meshes.labels.push({ element: el, position: new THREE.Vector3(0, -400, 200) });
                 }
 
-                // 3. Puntos de Información (Hotspots Modificados para Combine)
                 if(sc.hotspots) {
                     sc.hotspots.forEach(hs => {
                         const el = document.createElement('div'); el.className = 'marker-container hotspot-container interactive cursor-pointer';
@@ -1091,7 +1074,6 @@
                             $('hsModalTitle').textContent = hs.title || 'Punto de Información';
                             $('hsModalDesc').textContent = hs.desc || '';
                             
-                            // Galería dinámica
                             const galWrap = $('hsModalGalleryWrapper');
                             const gal = $('hsModalGallery');
                             if(hs.gallery && hs.gallery.length > 0) {
@@ -1104,7 +1086,6 @@
                                 galWrap.classList.add('hidden');
                             }
 
-                            // Botón 360
                             const btn360 = $('hsModalBtn360');
                             if(hs.targetUrl360 && hs.targetUrl360.trim() !== '') {
                                 btn360.classList.remove('hidden');
@@ -1123,7 +1104,6 @@
                 }
             }
 
-            // 4. Líneas 3D Guardadas (Globales o del Hotspot actual)
             if(linesToRender) {
                 linesToRender.forEach(line => {
                     if(!line.points || line.points.length < 2) return;
@@ -1137,7 +1117,6 @@
                 });
             }
 
-            // 5. Etiquetas de Texto Flotantes (Globales o del Hotspot actual)
             if(labelsToRender) {
                 labelsToRender.forEach(lbl => {
                     const el = document.createElement('div'); el.className = 'marker-container custom-label-container cursor-pointer interactive';
@@ -1151,7 +1130,6 @@
             }
         }
 
-        // LÍNEAS 3D: Feedback Visual mientras dibuja
         function drawLineFeedback() {
             if (activeLineMesh) { scene3D.remove(activeLineMesh); activeLineMesh = null; }
             if (activeLinePoints.length < 2) return;
@@ -1180,12 +1158,11 @@
         });
 
         renderer.domElement.addEventListener('pointermove', e => {
-            if(inSubScene && !isEditingVerticesLine && !isDrawingLine && !isDrawingLabel && !movingLabelId) return; // Permitir eventos en subescenas para herramientas permitidas
+            if(inSubScene && !isEditingVerticesLine && !isDrawingLine && !isDrawingLabel && !movingLabelId) return; 
             
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            // Arrastre de vértices (Polígonos o Líneas)
             if (draggingMarker) {
                 const hit = raycaster.intersectObject(sphere)[0];
                 if (hit) { 
@@ -1196,9 +1173,8 @@
                 return; 
             }
 
-            // Tooltip Lotes (Si no estamos en subescena)
             if(!inSubScene) {
-                const tt = $('tooltip'); tt.style.left = e.clientX + 'px'; tt.style.top = e.clientY + 'px';
+                const mt = $('miniTooltip');
                 const hit = raycaster.intersectObjects(meshes.polygons)[0];
                 
                 if (!hit) {
@@ -1206,7 +1182,7 @@
                         const l = hoveredMesh.userData.lot; 
                         hoveredMesh.material.opacity = l.opacity !== undefined ? parseFloat(l.opacity)/100 : (l.showShading !== false ? 0.35 : 0.0);
                     }
-                    hoveredMesh = null; tt.style.opacity = '0'; tt.style.pointerEvents = 'none';
+                    hoveredMesh = null; mt.style.opacity = '0';
                     renderer.domElement.style.cursor = (isDrawing||isDrawingHotspot||movingHotspotId||isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab'; return;
                 }
                 
@@ -1218,24 +1194,9 @@
                     }
                     hoveredMesh = mesh; hoveredMesh.material.opacity = 0.8; const lot = mesh.userData.lot;
                     
-                    $('ttName').textContent = lot.name; let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
-                    if(p) { $('ttPrice').textContent = p; $('ttPrice').classList.remove('hidden'); } else { $('ttPrice').classList.add('hidden'); }
-                    
-                    const isSold = lot.status === 'sold'; const isProcess = lot.status === 'proceso';
-                    $('ttStatus').textContent = isSold ? 'Vendido' : (isProcess ? 'En proceso de venta' : 'Disponible');
-                    $('ttStatus').className = `text-[10px] md:text-[11px] uppercase tracking-wider font-bold ${isSold ? 'text-red-400' : (isProcess?'text-blue-400':'text-green-400')}`;
-                    
-                    if(lot.area) { $('ttAreaText').textContent = lot.area; $('ttArea').classList.remove('hidden'); } else { $('ttArea').classList.add('hidden'); }
-                    if(lot.desc) { $('ttDesc').textContent = lot.desc; $('ttDesc').classList.remove('hidden'); } else { $('ttDesc').classList.add('hidden'); }
-
-                    if (lot.urls && lot.urls.length > 0) { 
-                        $('ttImage').src = lot.urls[0]; $('ttImage').classList.remove('hidden'); 
-                        $('ttClickHint').textContent = lot.urls.length > 1 ? `Galería (${lot.urls.length} fotos)` : 'Clic para ampliar'; 
-                        $('ttClickHint').classList.remove('hidden'); tt.style.pointerEvents = 'auto'; 
-                        $('ttImage').onclick = () => openFullGallery(lot.urls);
-                    } else { $('ttImage').classList.add('hidden'); $('ttClickHint').classList.add('hidden'); tt.style.pointerEvents = 'none'; }
-                    
-                    tt.style.opacity = '1';
+                    mt.textContent = lot.name;
+                    mt.style.left = e.clientX + 'px'; mt.style.top = e.clientY + 'px';
+                    mt.style.opacity = '1';
                 }
             } else {
                 renderer.domElement.style.cursor = (isDrawingLine||isDrawingLabel||movingLabelId) ? 'crosshair' : 'grab';
@@ -1247,14 +1208,50 @@
         });
 
         renderer.domElement.addEventListener('click', async e => {
-            if (!isAdmin || isEditingVertices || isEditingVerticesLine) return; 
+            if (isEditingVertices || isEditingVerticesLine) return; 
             
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; 
-            raycaster.setFromCamera(mouse, camera); const hit = raycaster.intersectObject(sphere)[0]; if (!hit) return;
+            raycaster.setFromCamera(mouse, camera); 
             
+            if (!inSubScene && !isDrawing && !isDrawingHotspot && !isDrawingLine && !isDrawingLabel && !movingHotspotId && !movingLabelId) {
+                const hitLot = raycaster.intersectObjects(meshes.polygons)[0];
+                if (hitLot) {
+                    const lot = hitLot.object.userData.lot;
+                    
+                    $('limTitle').textContent = lot.name; 
+                    let p = lot.price || ''; if(p && !p.includes('COP')) p = formatCOP(p);
+                    if(p) { $('limPrice').textContent = p; $('limPrice').classList.remove('hidden'); } else { $('limPrice').classList.add('hidden'); }
+                    
+                    const isSold = lot.status === 'sold'; const isProcess = lot.status === 'proceso';
+                    $('limStatus').textContent = isSold ? 'Vendido' : (isProcess ? 'En proceso de venta' : 'Disponible');
+                    $('limStatus').className = `uppercase tracking-wider ${isSold ? 'text-red-400' : (isProcess?'text-blue-400':'text-green-400')}`;
+                    
+                    if(lot.area) { $('limAreaText').textContent = lot.area; $('limArea').classList.remove('hidden'); } else { $('limArea').classList.add('hidden'); }
+                    if(lot.desc) { $('limDesc').textContent = lot.desc; $('limDesc').classList.remove('hidden'); } else { $('limDesc').classList.add('hidden'); }
+
+                    const galWrap = $('limGalleryWrapper');
+                    const gal = $('limGallery');
+                    if (lot.urls && lot.urls.length > 0) { 
+                        gal.innerHTML = '';
+                        lot.urls.forEach(url => {
+                            gal.innerHTML += `<img src="${url}" class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg shrink-0 cursor-pointer border border-white/20 hover:border-orange-500 shadow-md" onclick="openFullGallery(${JSON.stringify(lot.urls).replace(/"/g, '&quot;')}); event.stopPropagation();">`;
+                        });
+                        galWrap.classList.remove('hidden');
+                    } else { 
+                        galWrap.classList.add('hidden'); 
+                    }
+                    
+                    $('lotInfoModal').classList.add('active');
+                    $('miniTooltip').style.opacity = '0';
+                    return;
+                }
+            }
+
+            if (!isAdmin) return;
+
+            const hit = raycaster.intersectObject(sphere)[0]; if (!hit) return;
             const sc = getCurrentScene();
             
-            // 1. Portales 360 (Hotspots) - Solo funciona si NO estamos en subescena
             if ((isDrawingHotspot || movingHotspotId) && !inSubScene) {
                 if(!sc.hotspots) sc.hotspots = [];
                 if (movingHotspotId) { const hs = sc.hotspots.find(h => h.id === movingHotspotId); if(hs) hs.position = { x: hit.point.x, y: hit.point.y, z: hit.point.z }; movingHotspotId = null; showToast("Portal reubicado", "success"); } 
@@ -1262,7 +1259,6 @@
                 await saveStateToFirebase(); cancelHotspot(); rebuildLots(); renderHotspotList(); return;
             }
             
-            // 2. Custom Labels (Etiquetas) - Funcionan tanto principal como Sub-escena
             if (isDrawingLabel || movingLabelId) {
                 const target = inSubScene ? sc.hotspots.find(h => h.id === currentSubSceneHotspotId) : sc;
                 if(!target.customLabels) target.customLabels = [];
@@ -1272,14 +1268,12 @@
                 await saveStateToFirebase(); cancelLabelPlacement(); rebuildLots(); renderLabelList(); return;
             }
 
-            // 3. Lineas Libres - Funcionan en ambas
             if (isDrawingLine) {
                 activeLinePoints.push(hit.point.clone());
                 drawLineFeedback();
                 return;
             }
 
-            // 4. Lotes - Solo en principal
             if (isDrawing && !inSubScene) {
                 drawingPoints.push(hit.point.clone()); drawPolygonFeedback();
                 if (drawingPoints.length >= 3) { $('lotForm').classList.remove('hidden'); $('lotForm').scrollIntoView({ behavior: 'smooth' }); }
@@ -1332,7 +1326,7 @@
                 pendingHotspotData = { 
                     id: 'hs-' + Date.now(), title, desc, color, icon, 
                     gallery, targetUrl360, rot360,
-                    lines: [], customLabels: [] // Iniciamos los arrays para poder añadirle lineas y textos internos
+                    lines: [], customLabels: [] 
                 };
                 
                 $('hotspotForm').classList.add('hidden'); $('hotspotMenu').classList.remove('hidden'); 
@@ -1400,7 +1394,6 @@
             finally { $('loading').classList.add('hidden'); }
         };
 
-        // Subrutina para viajar a otra foto 360 usando un Hotspot
         function loadSubScene(url, title, hsId) {
             inSubScene = true; 
             currentSubSceneHotspotId = hsId;
@@ -1408,20 +1401,18 @@
             $('mainSceneTitle').textContent = title || "Vista Detalle"; 
             $('loading').classList.remove('hidden');
             
-            // Ocultar paneles innecesarios
             if($('adminSectionScenes')) {
                 $('adminSectionScenes').style.display = 'none';
                 $('adminSectionLots').style.display = 'none';
                 $('adminSectionHotspots').style.display = 'none';
             }
 
-            clear3D(); // Oculta todos los lotes de la vista principal
+            clear3D(); 
             
             texLoader.load(url, t => {
                 applyHighQualityTexture(t);
                 sphereMat.map = t; sphereMat.needsUpdate = true;
                 
-                // Aplicar rotación del norte para Sub-escena 360
                 const sc = getCurrentScene();
                 const hs = sc.hotspots.find(h => h.id === hsId);
                 if (window.sphere) {
@@ -1429,7 +1420,7 @@
                 }
 
                 $('loading').classList.add('hidden'); 
-                rebuildLots(); // Renderizará las líneas/textos del hotspot actual
+                rebuildLots(); 
                 renderAllUI();
             }, undefined, () => { 
                 showToast("Error cargando el archivo 360", "error");
@@ -1542,7 +1533,6 @@
             await saveStateToFirebase(); $('editLineModal').classList.remove('active'); rebuildLots(); renderLineList();
         };
 
-        // Edición Vértices Líneas
         $('btnEditLinePts').onclick = () => { $('editLineModal').classList.remove('active'); $('sidebar').classList.remove('open'); $('btnMaximizeAdmin').classList.add('hidden'); startVertexEditingLine(editingLineId); };
         
         function startVertexEditingLine(lineId) {
@@ -1553,7 +1543,7 @@
             lineBeingEdited = target.lines.find(l => l.id === lineId);
             backupPoints = JSON.parse(JSON.stringify(lineBeingEdited.points)); 
 
-            meshes.lines3D.forEach(m => { m.visible = false; }); // Ocultar temporalmente
+            meshes.lines3D.forEach(m => { m.visible = false; }); 
 
             const markerSize = isMobileDevice ? 24 : 18;
             const markerGeo = new THREE.SphereGeometry(markerSize, 32, 32); 
@@ -1653,7 +1643,6 @@
         $('startDraw').onclick = () => { cancelHotspot(); cancelLineDraw(); cancelLabelPlacement(); isDrawing = true; drawingPoints = []; $('drawingMenu').classList.remove('hidden'); $('startDraw').classList.add('hidden'); renderer.domElement.style.cursor = 'crosshair'; };
         $('cancelDraw').onclick = cancelDrawing;
 
-        // Auto color selector basico en creacion
         $('lotColor').addEventListener('input', () => { $('saveAvailable').style.backgroundColor = ''; $('saveProcess').style.backgroundColor = ''; $('saveSold').style.backgroundColor = ''; });
 
         async function createNewLot(status) {
@@ -1700,7 +1689,6 @@
             });
         }
 
-        // --- PUBLIC LOT LIST RENDER ---
         function renderPublicLotList() {
             const c = $('publicLotList'); c.innerHTML = ''; 
             const sc = getCurrentScene();
@@ -1726,7 +1714,7 @@
                 let priceMatch = true;
                 if (filterMinPrice > 0 || filterMaxPrice < Infinity) {
                     if (lotPrice === 0) {
-                        priceMatch = false; // Lotes sin precio no entran en filtro numérico estricto
+                        priceMatch = false; 
                     } else {
                         priceMatch = lotPrice >= filterMinPrice && lotPrice <= filterMaxPrice;
                     }
@@ -1967,7 +1955,6 @@
         function animate() {
             requestAnimationFrame(animate); controls.update();
             
-            // Render Labels (Lots, Hotspots, Custom)
             const allLabels = [...meshes.labels, ...meshes.customLabels];
             allLabels.forEach(x => {
                 const v = x.position.clone().project(camera);
@@ -1975,8 +1962,11 @@
                 x.element.style.display = 'flex'; x.element.style.left = (v.x * 0.5 + 0.5) * innerWidth + 'px'; x.element.style.top = (v.y * -0.5 + 0.5) * innerHeight + 'px';
             });
 
-            // Brújula update
-            if($('compassNeedle')) { const az = controls.getAzimuthalAngle(); const deg = THREE.MathUtils.radToDeg(az);$('compassNeedle').style.transform = `rotate(${deg - 45}deg)`; }
+            if($('compassNeedle')) { 
+                const az = controls.getAzimuthalAngle(); 
+                const deg = THREE.MathUtils.radToDeg(az); 
+                $('compassNeedle').style.transform = `rotate(${deg}deg)`; 
+            }
             renderer.render(scene3D, camera);
         }
 
